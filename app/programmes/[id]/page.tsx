@@ -14,7 +14,8 @@ import { db } from "@/lib/db";
 import { exerciseOptionsFor } from "@/lib/workouts/queries";
 
 export const metadata: Metadata = {
-  title: "Programme — FitPilot",
+  title: "Programme",
+  robots: { index: false, follow: false },
 };
 
 export default async function ProgrammeDetailPage({

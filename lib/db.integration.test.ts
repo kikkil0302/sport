@@ -7,7 +7,7 @@ const db = new PrismaClient({
   adapter: new PrismaBetterSqlite3({ url: "file:./prisma/dev.db" }),
 });
 
-const TEST_EMAIL = "integration-test@fitpilot.local";
+const TEST_EMAIL = "integration-test@trakmetrik.local";
 
 afterAll(async () => {
   await db.user.deleteMany({ where: { email: TEST_EMAIL } });

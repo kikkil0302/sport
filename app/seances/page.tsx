@@ -6,7 +6,8 @@ import { db } from "@/lib/db";
 import { totalVolumeKg } from "@/lib/workouts/volume";
 
 export const metadata: Metadata = {
-  title: "Mes séances — FitPilot",
+  title: "Mes séances",
+  robots: { index: false, follow: false },
 };
 
 const DATE_FORMAT = new Intl.DateTimeFormat("fr-FR", { dateStyle: "full" });

@@ -14,7 +14,8 @@ import { exerciseOptionsFor } from "@/lib/workouts/queries";
 import { totalVolumeKg } from "@/lib/workouts/volume";
 
 export const metadata: Metadata = {
-  title: "Séance — FitPilot",
+  title: "Séance",
+  robots: { index: false, follow: false },
 };
 
 const DATE_FORMAT = new Intl.DateTimeFormat("fr-FR", { dateStyle: "full" });

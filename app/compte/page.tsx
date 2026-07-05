@@ -5,7 +5,8 @@ import { DeleteAccountForm } from "@/components/auth/delete-account-form";
 import { requireUser } from "@/lib/auth";
 
 export const metadata: Metadata = {
-  title: "Mon compte — FitPilot",
+  title: "Mon compte",
+  robots: { index: false, follow: false },
 };
 
 const DATE_FORMAT = new Intl.DateTimeFormat("fr-FR", { dateStyle: "long" });

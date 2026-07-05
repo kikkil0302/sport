@@ -12,7 +12,8 @@ import { countWithinDays, weeklyVolume } from "@/lib/stats/weekly";
 import { totalVolumeKg } from "@/lib/workouts/volume";
 
 export const metadata: Metadata = {
-  title: "Statistiques — FitPilot",
+  title: "Statistiques",
+  robots: { index: false, follow: false },
 };
 
 const DAY_MONTH = new Intl.DateTimeFormat("fr-FR", {

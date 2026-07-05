@@ -5,7 +5,8 @@ import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 
 export const metadata: Metadata = {
-  title: "Mes programmes — FitPilot",
+  title: "Mes programmes",
+  robots: { index: false, follow: false },
 };
 
 export default async function ProgrammesPage() {

@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Politique de confidentialité — FitPilot",
+  title: "Politique de confidentialité",
+  description:
+    "Comment Trakmetrik protège vos données : minimisation, calculs côté client, conformité RGPD, export et suppression de compte.",
+  alternates: { canonical: "/confidentialite" },
 };
 
 const SECTIONS = [
@@ -38,7 +41,7 @@ export default function ConfidentialitePage() {
         Politique de confidentialité
       </h1>
       <p className="mt-2 text-zinc-600 dark:text-zinc-400">
-        FitPilot applique le principe de minimisation des données du RGPD :
+        Trakmetrik applique le principe de minimisation des données du RGPD :
         nous ne collectons que ce qui est strictement nécessaire au
         fonctionnement du service.
       </p>

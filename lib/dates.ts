@@ -23,3 +23,8 @@ export function localDayKey(date: Date): string {
 export function todayInputValue(): string {
   return localDayKey(new Date());
 }
+
+/** Current calendar year (helper keeps `new Date()` out of component render). */
+export function currentYear(now: Date = new Date()): number {
+  return now.getFullYear();
+}

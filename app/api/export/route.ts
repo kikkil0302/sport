@@ -80,7 +80,7 @@ export async function GET(): Promise<Response> {
   return new Response(JSON.stringify(payload, null, 2), {
     headers: {
       "Content-Type": "application/json; charset=utf-8",
-      "Content-Disposition": 'attachment; filename="fitpilot-donnees.json"',
+      "Content-Disposition": 'attachment; filename="trakmetrik-donnees.json"',
     },
   });
 }

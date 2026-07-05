@@ -1,10 +1,20 @@
 import type { Metadata } from "next";
 import { NutritionCalculator } from "@/components/nutrition-calculator";
 
+const title = "Calculateurs de calories, macros et IMC";
+const description =
+  "Calculez gratuitement vos besoins caloriques (BMR, TDEE), la répartition de vos macros et votre IMC selon votre profil et votre objectif. Formules Mifflin-St Jeor, Katch-McArdle et classification OMS. Calcul 100 % dans votre navigateur.";
+
 export const metadata: Metadata = {
-  title: "Calculateurs — FitPilot",
-  description:
-    "Calculez vos besoins caloriques, vos macros et votre IMC selon votre profil et votre objectif.",
+  title,
+  description,
+  alternates: { canonical: "/calculateurs" },
+  openGraph: {
+    title: `${title} — Trakmetrik`,
+    description,
+    url: "/calculateurs",
+    type: "website",
+  },
 };
 
 export default function CalculateursPage() {

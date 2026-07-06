@@ -55,7 +55,7 @@ export const FAQ: readonly { question: string; answer: string }[] = [
   {
     question: "Mes données personnelles sont-elles protégées ?",
     answer:
-      "Oui. Les calculateurs fonctionnent entièrement dans votre navigateur : aucune donnée saisie n'est envoyée à nos serveurs. Pour les comptes, Trakmetrik applique la minimisation des données (email et mot de passe chiffré uniquement), conformément au RGPD, avec export et suppression définitive du compte à tout moment.",
+      "Oui. Les calculateurs fonctionnent entièrement dans votre navigateur : aucune donnée saisie n'est envoyée à nos serveurs. Pour les comptes, Trakmetrik applique la minimisation des données (e-mail et mot de passe chiffré uniquement), conformément au RGPD, avec export et suppression définitive du compte à tout moment.",
   },
   {
     question: "Ai-je besoin d'un compte pour utiliser les calculateurs ?",

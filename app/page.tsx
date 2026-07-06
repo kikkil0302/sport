@@ -5,47 +5,54 @@ import { homeGraph } from "@/lib/structured-data";
 
 const FEATURES = [
   {
-    icon: <CalculatorIcon />,
-    title: "Calories & macros sur mesure",
+    index: "01",
+    title: "Calories & macros",
     description:
-      "Métabolisme de base (Mifflin-St Jeor ou Katch-McArdle), dépense journalière et répartition protéines / glucides / lipides adaptée à votre objectif.",
+      "Métabolisme de base (Mifflin-St Jeor ou Katch-McArdle), dépense journalière et répartition protéines / glucides / lipides selon votre objectif.",
+    metric: "BMR · TDEE · MACROS",
   },
   {
-    icon: <HeartIcon />,
-    title: "IMC & conseils concrets",
+    index: "02",
+    title: "IMC & lecture OMS",
     description:
-      "Indice de masse corporelle selon la classification OMS, accompagné de recommandations personnalisées et actionnables.",
+      "Indice de masse corporelle selon la classification de l'OMS, avec une interprétation et des recommandations concrètes.",
+    metric: "IMC · CATÉGORIE OMS",
   },
   {
-    icon: <ChartIcon />,
+    index: "03",
     title: "Séances, programmes & stats",
     description:
-      "Journal de séances, programmes réutilisables et courbes de progression (volume, poids, 1RM estimé) dans un compte personnel sécurisé.",
+      "Journal de séances, programmes réutilisables et courbes de progression — volume, charges, 1RM estimé — dans un compte sécurisé.",
+    metric: "VOLUME · 1RM · TENDANCE",
   },
 ] as const;
 
 const STEPS = [
   {
+    index: "01",
     title: "Calculez vos besoins",
     description:
-      "Renseignez votre profil : calories cibles, macros et IMC s'affichent instantanément, directement dans votre navigateur.",
+      "Renseignez votre profil : calories, macros et IMC s'affichent instantanément, calculés dans votre navigateur.",
   },
   {
-    title: "Planifiez vos séances",
+    index: "02",
+    title: "Enregistrez vos séances",
     description:
-      "Créez des programmes réutilisables et enregistrez chaque série, exercice par exercice, en quelques secondes.",
+      "Créez des programmes réutilisables et notez chaque série, exercice par exercice, en quelques secondes.",
   },
   {
-    title: "Suivez votre progression",
+    index: "03",
+    title: "Lisez votre progression",
     description:
-      "Visualisez l'évolution de votre volume, de vos charges et de votre 1RM estimé pour rester motivé sur la durée.",
+      "Suivez l'évolution de votre volume, de vos charges et de votre 1RM estimé, semaine après semaine.",
   },
 ] as const;
 
-const TRUST_POINTS = [
-  "100 % gratuit",
-  "Aucune donnée revendue",
-  "Formules reconnues",
+const REFS = [
+  { value: "Mifflin-St Jeor", label: "& Katch-McArdle" },
+  { value: "OMS", label: "Classification IMC" },
+  { value: "22", label: "Exercices intégrés" },
+  { value: "100 %", label: "Calculs côté client" },
 ] as const;
 
 export default function Home() {
@@ -54,105 +61,99 @@ export default function Home() {
       <JsonLd data={homeGraph()} />
 
       {/* ---------- HERO ---------- */}
-      <section className="relative overflow-hidden">
-        <div className="hero-aura pointer-events-none absolute inset-0 -z-10" />
-        <div className="mx-auto grid max-w-6xl items-center gap-12 px-4 py-20 lg:grid-cols-2 lg:py-28">
+      <section className="relative overflow-hidden border-b border-zinc-200 dark:border-zinc-800">
+        <div className="grid-lines grid-fade pointer-events-none absolute inset-0 -z-10" />
+        <div className="mx-auto grid max-w-6xl items-center gap-14 px-6 py-20 lg:grid-cols-[1.05fr_1fr] lg:py-28">
           <div>
-            <span className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-300">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-              Nutrition &amp; entraînement, sans prise de tête
-            </span>
-            <h1 className="mt-5 text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl">
-              Reprenez le sport,{" "}
-              <span className="text-gradient-brand">on s&apos;occupe des calculs</span>
+            <div className="mono-label flex items-center gap-2 text-zinc-500 dark:text-zinc-400">
+              <span className="h-1.5 w-1.5 bg-emerald-500" />
+              Nutrition · Entraînement · Suivi
+            </div>
+            <h1 className="mt-6 text-4xl font-semibold leading-[1.05] tracking-tight sm:text-5xl lg:text-[3.75rem]">
+              Reprenez le sport.
+              <br />
+              Laissez les chiffres
+              <br />à Trakmetrik.
             </h1>
-            <p className="mt-5 max-w-xl text-lg text-zinc-600 dark:text-zinc-400">
-              Diététique, macros, IMC, séances : Trakmetrik centralise tout le
-              travail invisible de la remise en forme pour que vous puissiez
-              vous concentrer sur l&apos;entraînement.
+            <p className="mt-6 max-w-md text-lg leading-relaxed text-zinc-600 dark:text-zinc-400">
+              Calories, macros, IMC, séances et progression — mesurés, calculés
+              et suivis dans un seul tableau de bord. Précis, gratuit,
+              respectueux de vos données.
             </p>
-            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-              <Link
-                href="/calculateurs"
-                className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-6 py-3 font-semibold text-white shadow-sm shadow-emerald-600/20 transition-colors hover:bg-emerald-700"
-              >
+            <div className="mt-9 flex flex-col gap-3 sm:flex-row">
+              <Link href="/calculateurs" className={PRIMARY_BTN}>
                 Calculer mes besoins
                 <ArrowIcon />
               </Link>
-              <Link
-                href="/inscription"
-                className="inline-flex items-center justify-center rounded-xl border border-zinc-300 px-6 py-3 font-semibold text-zinc-800 transition-colors hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-100 dark:hover:bg-zinc-900"
-              >
-                Créer un compte gratuit
+              <Link href="/inscription" className={GHOST_BTN}>
+                Créer un compte
               </Link>
             </div>
-            <ul className="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-sm text-zinc-600 dark:text-zinc-400">
-              {TRUST_POINTS.map((point) => (
-                <li key={point} className="flex items-center gap-2">
-                  <CheckIcon />
-                  {point}
-                </li>
+            <dl className="mt-12 grid max-w-lg grid-cols-2 border-t border-zinc-200 sm:grid-cols-4 dark:border-zinc-800">
+              {REFS.map(({ value, label }) => (
+                <div
+                  key={value}
+                  className="border-b border-zinc-200 py-4 pr-4 sm:border-b-0 dark:border-zinc-800"
+                >
+                  <dt className="text-sm font-medium tracking-tight">{value}</dt>
+                  <dd className="mono-label mt-1 text-zinc-500 dark:text-zinc-500">
+                    {label}
+                  </dd>
+                </div>
               ))}
-            </ul>
+            </dl>
           </div>
 
-          <AppPreview />
+          <Dashboard />
         </div>
       </section>
 
-      {/* ---------- BANDEAU CONFIANCE ---------- */}
-      <section className="border-y border-zinc-200 bg-zinc-50/60 dark:border-zinc-800 dark:bg-zinc-900/40">
-        <div className="mx-auto grid max-w-6xl gap-6 px-4 py-8 text-center sm:grid-cols-3">
-          <TrustStat value="Mifflin-St Jeor" label="& Katch-McArdle pour vos calories" />
-          <TrustStat value="Classification OMS" label="pour l'interprétation de l'IMC" />
-          <TrustStat value="22 exercices" label="intégrés, prêts à l'emploi" />
-        </div>
-      </section>
-
-      {/* ---------- FONCTIONNALITÉS ---------- */}
-      <section className="mx-auto max-w-6xl px-4 py-20">
-        <div className="mx-auto max-w-2xl text-center">
-          <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
-            Tout votre suivi au même endroit
-          </h2>
-          <p className="mt-4 text-lg text-zinc-600 dark:text-zinc-400">
-            Des calculateurs fiables aux statistiques de progression, Trakmetrik
-            couvre l&apos;ensemble de votre parcours.
-          </p>
-        </div>
-        <div className="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {FEATURES.map(({ icon, title, description }) => (
-            <div
-              key={title}
-              className="group rounded-2xl border border-zinc-200 bg-white p-6 transition-all hover:-translate-y-0.5 hover:border-emerald-300 hover:shadow-lg hover:shadow-emerald-600/5 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-emerald-800"
+      {/* ---------- FONCTIONNALITÉS (fiche technique) ---------- */}
+      <section className="mx-auto max-w-6xl px-6 py-20">
+        <SectionHead
+          eyebrow="Ce que ça mesure"
+          title="Un seul outil, toutes vos métriques"
+        />
+        <div className="mt-14 grid border-t border-zinc-200 sm:grid-cols-3 dark:border-zinc-800">
+          {FEATURES.map(({ index, title, description, metric }) => (
+            <article
+              key={index}
+              className="border-b border-zinc-200 px-0 py-8 sm:border-b-0 sm:border-l sm:px-8 sm:py-2 sm:first:border-l-0 sm:first:pl-0 dark:border-zinc-800"
             >
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-400">
-                {icon}
+              <div className="mono-label text-zinc-400 dark:text-zinc-600">
+                {index}
               </div>
-              <h3 className="mt-5 text-lg font-semibold">{title}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
+              <h3 className="mt-4 text-lg font-semibold tracking-tight">
+                {title}
+              </h3>
+              <p className="mt-3 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
                 {description}
               </p>
-            </div>
+              <div className="mono-label mt-5 text-emerald-600 dark:text-emerald-500">
+                {metric}
+              </div>
+            </article>
           ))}
         </div>
       </section>
 
       {/* ---------- COMMENT ÇA MARCHE ---------- */}
-      <section className="border-t border-zinc-200 bg-zinc-50/60 dark:border-zinc-800 dark:bg-zinc-900/40">
-        <div className="mx-auto max-w-6xl px-4 py-20">
-          <div className="mx-auto max-w-2xl text-center">
-            <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
-              Trois étapes, aucune complication
-            </h2>
-          </div>
-          <div className="mt-14 grid gap-8 sm:grid-cols-3">
-            {STEPS.map(({ title, description }, index) => (
-              <div key={title} className="relative">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-600 text-sm font-bold text-white">
-                  {index + 1}
+      <section className="border-y border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950">
+        <div className="mx-auto max-w-6xl px-6 py-20">
+          <SectionHead
+            eyebrow="Comment ça marche"
+            title="Trois étapes, aucune friction"
+          />
+          <div className="mt-14 grid gap-px overflow-hidden border border-zinc-200 bg-zinc-200 sm:grid-cols-3 dark:border-zinc-800 dark:bg-zinc-800">
+            {STEPS.map(({ index, title, description }) => (
+              <div
+                key={index}
+                className="bg-white p-7 dark:bg-zinc-950"
+              >
+                <div className="metric-num text-2xl font-semibold text-zinc-300 dark:text-zinc-700">
+                  {index}
                 </div>
-                <h3 className="mt-4 text-lg font-semibold">{title}</h3>
+                <h3 className="mt-4 font-semibold tracking-tight">{title}</h3>
                 <p className="mt-2 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
                   {description}
                 </p>
@@ -163,43 +164,39 @@ export default function Home() {
       </section>
 
       {/* ---------- CONFIDENTIALITÉ ---------- */}
-      <section className="mx-auto max-w-6xl px-4 py-20">
-        <div className="grid items-center gap-8 rounded-3xl border border-zinc-200 bg-white p-8 sm:p-12 lg:grid-cols-2 dark:border-zinc-800 dark:bg-zinc-900">
+      <section className="mx-auto max-w-6xl px-6 py-20">
+        <div className="grid items-start gap-10 lg:grid-cols-[1fr_1.1fr]">
           <div>
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-400">
-              <ShieldIcon />
-            </div>
-            <h2 className="mt-5 text-2xl font-bold tracking-tight sm:text-3xl">
-              Vos données vous appartiennent
-            </h2>
-            <p className="mt-4 text-zinc-600 dark:text-zinc-400">
-              Conçu pour le RGPD dès le départ : les calculateurs tournent
-              entièrement dans votre navigateur, nous ne collectons que le
-              strict nécessaire et vous pouvez exporter ou supprimer votre
-              compte à tout moment.
+            <SectionHead
+              eyebrow="Confidentialité"
+              title="Vos données ne quittent pas votre appareil"
+            />
+            <p className="mt-6 max-w-md text-zinc-600 dark:text-zinc-400">
+              Conçu pour le RGPD dès l&apos;origine : les calculateurs tournent
+              entièrement dans votre navigateur, nous ne stockons que le strict
+              nécessaire, et vous gardez la main.
             </p>
             <Link
               href="/confidentialite"
-              className="mt-6 inline-flex items-center gap-2 font-semibold text-emerald-600 hover:text-emerald-700 dark:text-emerald-400"
+              className="mono-label mt-6 inline-flex items-center gap-2 text-zinc-900 hover:text-emerald-600 dark:text-zinc-100 dark:hover:text-emerald-400"
             >
-              Lire notre politique de confidentialité
+              Politique de confidentialité
               <ArrowIcon />
             </Link>
           </div>
-          <ul className="space-y-4">
+          <ul className="divide-y divide-zinc-200 border-y border-zinc-200 dark:divide-zinc-800 dark:border-zinc-800">
             {[
-              "Calculateurs 100 % côté client : rien n'est envoyé sur nos serveurs.",
-              "Minimisation des données : email, mot de passe chiffré, c'est tout.",
-              "Export de vos données et suppression définitive en un clic.",
-            ].map((item) => (
-              <li
-                key={item}
-                className="flex items-start gap-3 rounded-xl border border-zinc-200 bg-zinc-50 p-4 text-sm dark:border-zinc-800 dark:bg-zinc-950"
-              >
-                <span className="mt-0.5 shrink-0 text-emerald-600 dark:text-emerald-400">
-                  <CheckIcon />
+              ["Calcul local", "Les calculateurs ne transmettent rien à nos serveurs."],
+              ["Minimisation", "E-mail et mot de passe chiffré — rien d'autre n'est requis."],
+              ["Portabilité & effacement", "Export de vos données et suppression du compte en un clic."],
+            ].map(([term, detail]) => (
+              <li key={term} className="flex gap-6 py-5">
+                <span className="mono-label w-40 shrink-0 pt-0.5 text-emerald-600 dark:text-emerald-500">
+                  {term}
                 </span>
-                {item}
+                <span className="text-sm text-zinc-600 dark:text-zinc-400">
+                  {detail}
+                </span>
               </li>
             ))}
           </ul>
@@ -207,23 +204,25 @@ export default function Home() {
       </section>
 
       {/* ---------- FAQ ---------- */}
-      <section className="border-t border-zinc-200 bg-zinc-50/60 dark:border-zinc-800 dark:bg-zinc-900/40">
-        <div className="mx-auto max-w-3xl px-4 py-20">
-          <div className="text-center">
-            <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
-              Questions fréquentes
-            </h2>
-          </div>
-          <div className="mt-10 divide-y divide-zinc-200 dark:divide-zinc-800">
-            {FAQ.map(({ question, answer }) => (
-              <details key={question} className="group py-5">
-                <summary className="flex cursor-pointer list-none items-center justify-between gap-4 font-semibold">
+      <section className="border-t border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950">
+        <div className="mx-auto max-w-3xl px-6 py-20">
+          <SectionHead eyebrow="FAQ" title="Questions fréquentes" />
+          <div className="mt-12 border-t border-zinc-200 dark:border-zinc-800">
+            {FAQ.map(({ question, answer }, i) => (
+              <details
+                key={question}
+                className="group border-b border-zinc-200 py-5 dark:border-zinc-800"
+              >
+                <summary className="flex cursor-pointer list-none items-baseline gap-4 font-medium tracking-tight">
+                  <span className="mono-label pt-1 text-zinc-400 dark:text-zinc-600">
+                    {String(i + 1).padStart(2, "0")}
+                  </span>
                   {question}
-                  <span className="shrink-0 text-emerald-600 transition-transform group-open:rotate-45 dark:text-emerald-400">
+                  <span className="ml-auto shrink-0 pt-1 text-zinc-400 transition-transform group-open:rotate-45 dark:text-zinc-500">
                     <PlusIcon />
                   </span>
                 </summary>
-                <p className="mt-3 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
+                <p className="mt-3 pl-10 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
                   {answer}
                 </p>
               </details>
@@ -233,28 +232,22 @@ export default function Home() {
       </section>
 
       {/* ---------- CTA FINAL ---------- */}
-      <section className="mx-auto max-w-6xl px-4 pb-24 pt-20">
-        <div className="relative overflow-hidden rounded-3xl bg-emerald-600 px-6 py-16 text-center">
-          <div className="hero-aura pointer-events-none absolute inset-0 opacity-40" />
-          <h2 className="relative text-3xl font-bold tracking-tight text-white sm:text-4xl">
-            Prêt à passer à l&apos;action ?
+      <section className="relative overflow-hidden border-t border-zinc-200 dark:border-zinc-800">
+        <div className="grid-lines grid-fade pointer-events-none absolute inset-0" />
+        <div className="relative mx-auto max-w-3xl px-6 py-24 text-center">
+          <h2 className="text-3xl font-semibold tracking-tight sm:text-4xl">
+            Commencez à mesurer
           </h2>
-          <p className="relative mx-auto mt-4 max-w-xl text-emerald-50">
+          <p className="mx-auto mt-4 max-w-lg text-zinc-600 dark:text-zinc-400">
             Calculez vos besoins en moins d&apos;une minute, sans inscription.
             Créez un compte quand vous voulez suivre vos séances.
           </p>
-          <div className="relative mt-8 flex flex-col justify-center gap-3 sm:flex-row">
-            <Link
-              href="/calculateurs"
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-6 py-3 font-semibold text-emerald-700 transition-colors hover:bg-emerald-50"
-            >
+          <div className="mt-9 flex flex-col justify-center gap-3 sm:flex-row">
+            <Link href="/calculateurs" className={PRIMARY_BTN}>
               Calculer mes besoins
               <ArrowIcon />
             </Link>
-            <Link
-              href="/inscription"
-              className="inline-flex items-center justify-center rounded-xl border border-white/40 px-6 py-3 font-semibold text-white transition-colors hover:bg-white/10"
-            >
+            <Link href="/inscription" className={GHOST_BTN}>
               Créer un compte gratuit
             </Link>
           </div>
@@ -264,97 +257,140 @@ export default function Home() {
   );
 }
 
-/* ---------- Aperçu produit (mockup on-brand, sans image externe) ---------- */
-function AppPreview() {
-  const macros = [
-    { label: "Protéines", pct: 30, color: "bg-emerald-500" },
-    { label: "Glucides", pct: 45, color: "bg-sky-500" },
-    { label: "Lipides", pct: 25, color: "bg-amber-500" },
-  ];
+/* Boutons — encre/blanc inversé (primaire) et fantôme à filet (secondaire). */
+const PRIMARY_BTN =
+  "inline-flex items-center justify-center gap-2 rounded-md bg-zinc-900 px-5 py-3 text-sm font-medium text-white transition-colors hover:bg-zinc-700 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200";
+const GHOST_BTN =
+  "inline-flex items-center justify-center rounded-md border border-zinc-300 px-5 py-3 text-sm font-medium text-zinc-800 transition-colors hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-100 dark:hover:bg-zinc-900";
+
+function SectionHead({ eyebrow, title }: { eyebrow: string; title: string }) {
   return (
-    <div className="relative">
-      <div className="rounded-3xl border border-zinc-200 bg-white p-5 shadow-xl shadow-zinc-900/5 dark:border-zinc-800 dark:bg-zinc-900 dark:shadow-black/30">
-        <div className="mb-4 flex items-center justify-between">
-          <span className="text-sm font-semibold text-zinc-500 dark:text-zinc-400">
-            Votre bilan du jour
+    <div className="max-w-2xl">
+      <div className="mono-label text-zinc-500 dark:text-zinc-500">{eyebrow}</div>
+      <h2 className="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">
+        {title}
+      </h2>
+    </div>
+  );
+}
+
+/* ---------- Mini-dashboard analytique (mock on-brand, sans image) ---------- */
+function Dashboard() {
+  const volumes = [62, 48, 74, 55, 88, 70, 96];
+  const days = ["L", "M", "M", "J", "V", "S", "D"];
+  const macros = [
+    { label: "P", pct: 30, className: "bg-emerald-500" },
+    { label: "G", pct: 45, className: "bg-zinc-400 dark:bg-zinc-500" },
+    { label: "L", pct: 25, className: "bg-zinc-300 dark:bg-zinc-700" },
+  ];
+
+  return (
+    <div className="rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950">
+      {/* Barre d'entête */}
+      <div className="flex items-center justify-between border-b border-zinc-200 px-4 py-3 dark:border-zinc-800">
+        <div className="mono-label flex items-center gap-2 text-zinc-500 dark:text-zinc-400">
+          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />
+          Tableau de bord
+        </div>
+        <span className="mono-label text-zinc-400 dark:text-zinc-600">
+          7 jours
+        </span>
+      </div>
+
+      {/* Tuiles métriques */}
+      <div className="grid grid-cols-3 divide-x divide-zinc-200 border-b border-zinc-200 dark:divide-zinc-800 dark:border-zinc-800">
+        <MetricTile label="Calories" value="2 180" unit="kcal" delta="+4,2 %" up />
+        <MetricTile label="Volume" value="4 320" unit="kg" delta="+11 %" up />
+        <MetricTile label="Poids" value="74,2" unit="kg" delta="−0,7 %" />
+      </div>
+
+      {/* Graphe volume hebdo */}
+      <div className="px-4 py-4">
+        <div className="mono-label mb-3 text-zinc-500 dark:text-zinc-500">
+          Volume hebdomadaire
+        </div>
+        <div className="flex h-24 items-end gap-2">
+          {volumes.map((v, i) => (
+            <div
+              key={i}
+              className={`flex-1 rounded-sm ${
+                i === volumes.length - 1
+                  ? "bg-emerald-500"
+                  : "bg-zinc-200 dark:bg-zinc-800"
+              }`}
+              style={{ height: `${v}%` }}
+            />
+          ))}
+        </div>
+        <div className="mt-2 flex gap-2">
+          {days.map((d, i) => (
+            <span
+              key={i}
+              className="mono-label flex-1 text-center text-[0.5rem] text-zinc-400 dark:text-zinc-600"
+            >
+              {d}
+            </span>
+          ))}
+        </div>
+      </div>
+
+      {/* Répartition macros */}
+      <div className="border-t border-zinc-200 px-4 py-4 dark:border-zinc-800">
+        <div className="mb-2 flex items-center justify-between">
+          <span className="mono-label text-zinc-500 dark:text-zinc-500">
+            Macros
           </span>
-          <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
-            Objectif : sèche
+          <span className="metric-num text-xs text-zinc-500 dark:text-zinc-400">
+            30 / 45 / 25
           </span>
         </div>
-        <div className="grid grid-cols-2 gap-3">
-          <PreviewTile label="Calories cibles" value="2 180" unit="kcal" highlight />
-          <PreviewTile label="Dépense (TDEE)" value="2 560" unit="kcal" />
-          <PreviewTile label="Métabolisme (BMR)" value="1 720" unit="kcal" />
-          <PreviewTile label="IMC" value="22,4" unit="Normal" />
-        </div>
-        <div className="mt-4 rounded-2xl border border-zinc-200 p-4 dark:border-zinc-800">
-          <div className="mb-3 text-sm font-semibold">Répartition des macros</div>
-          <div className="space-y-3">
-            {macros.map(({ label, pct, color }) => (
-              <div key={label}>
-                <div className="mb-1 flex justify-between text-xs text-zinc-500 dark:text-zinc-400">
-                  <span>{label}</span>
-                  <span>{pct} %</span>
-                </div>
-                <div className="h-2 overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-800">
-                  <div className={`h-full rounded-full ${color}`} style={{ width: `${pct}%` }} />
-                </div>
-              </div>
-            ))}
-          </div>
+        <div className="flex h-2 overflow-hidden rounded-full">
+          {macros.map(({ label, pct, className }) => (
+            <div key={label} className={className} style={{ width: `${pct}%` }} />
+          ))}
         </div>
       </div>
     </div>
   );
 }
 
-function PreviewTile({
+function MetricTile({
   label,
   value,
   unit,
-  highlight = false,
+  delta,
+  up = false,
 }: {
   label: string;
   value: string;
   unit: string;
-  highlight?: boolean;
+  delta: string;
+  up?: boolean;
 }) {
   return (
-    <div
-      className={`rounded-2xl border p-3 ${
-        highlight
-          ? "border-emerald-300 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-950"
-          : "border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950"
-      }`}
-    >
-      <div className="text-[11px] text-zinc-500 dark:text-zinc-400">{label}</div>
-      <div className="mt-0.5 flex items-baseline gap-1">
-        <span className="text-xl font-bold tabular-nums">{value}</span>
-        <span className="text-[11px] text-zinc-500 dark:text-zinc-400">{unit}</span>
+    <div className="px-4 py-4">
+      <div className="mono-label text-zinc-500 dark:text-zinc-500">{label}</div>
+      <div className="mt-1.5 flex items-baseline gap-1">
+        <span className="metric-num text-xl font-semibold">{value}</span>
+        <span className="mono-label text-zinc-400 dark:text-zinc-600">{unit}</span>
+      </div>
+      <div
+        className={`mono-label mt-1 ${
+          up
+            ? "text-emerald-600 dark:text-emerald-500"
+            : "text-zinc-400 dark:text-zinc-500"
+        }`}
+      >
+        {up ? "▲" : "▼"} {delta}
       </div>
     </div>
   );
-}
-
-function TrustStat({ value, label }: { value: string; label: string }) {
-  return (
-    <div>
-      <div className="font-semibold text-emerald-700 dark:text-emerald-400">{value}</div>
-      <div className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">{label}</div>
-    </div>
-  );
-}
-
-/* ---------- Icônes (SVG inline, sans dépendance) ---------- */
-function iconProps(): { className: string } {
-  return { className: "h-5 w-5" };
 }
 
 function ArrowIcon() {
   return (
     <svg
-      {...iconProps()}
+      className="h-4 w-4"
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -368,98 +404,10 @@ function ArrowIcon() {
   );
 }
 
-function CheckIcon() {
-  return (
-    <svg
-      className="h-4 w-4 text-emerald-600 dark:text-emerald-400"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2.5}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M20 6 9 17l-5-5" />
-    </svg>
-  );
-}
-
-function CalculatorIcon() {
-  return (
-    <svg
-      {...iconProps()}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={1.8}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <rect x="4" y="3" width="16" height="18" rx="2" />
-      <path d="M8 7h8M8 12h.01M12 12h.01M16 12h.01M8 16h.01M12 16h.01M16 16h.01" />
-    </svg>
-  );
-}
-
-function HeartIcon() {
-  return (
-    <svg
-      {...iconProps()}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={1.8}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M19 14c1.5-1.5 3-3.3 3-5.5A4.5 4.5 0 0 0 12 5 4.5 4.5 0 0 0 2 8.5c0 2.2 1.5 4 3 5.5l7 7Z" />
-    </svg>
-  );
-}
-
-function ChartIcon() {
-  return (
-    <svg
-      {...iconProps()}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={1.8}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M3 3v18h18" />
-      <path d="M7 15l4-5 3 3 4-6" />
-    </svg>
-  );
-}
-
-function ShieldIcon() {
-  return (
-    <svg
-      {...iconProps()}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={1.8}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M12 3l7 3v6c0 4-3 7-7 9-4-2-7-5-7-9V6l7-3Z" />
-      <path d="M9 12l2 2 4-4" />
-    </svg>
-  );
-}
-
 function PlusIcon() {
   return (
     <svg
-      className="h-5 w-5"
+      className="h-4 w-4"
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"

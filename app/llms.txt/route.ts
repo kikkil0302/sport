@@ -27,7 +27,7 @@ export function GET() {
     "## Confidentialité",
     "",
     "- Les calculateurs fonctionnent entièrement côté client : aucune donnée saisie n'est envoyée aux serveurs.",
-    "- Conforme au RGPD, minimisation des données (email et mot de passe chiffré uniquement).",
+    "- Conforme au RGPD, minimisation des données (e-mail et mot de passe chiffré uniquement).",
     "- Export et suppression définitive du compte disponibles à tout moment.",
     "",
     "## Pages",

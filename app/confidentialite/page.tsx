@@ -26,7 +26,7 @@ const SECTIONS = [
   },
   {
     title: "Vos droits",
-    body: "Vous disposez des droits d'accès, de rectification, d'effacement et de portabilité de vos données. La suppression du compte est disponible directement depuis la page « Mon compte », sans nous contacter. L'export de vos données au format JSON sera disponible depuis la même page.",
+    body: "Vous disposez des droits d'accès, de rectification, d'effacement et de portabilité de vos données. La suppression du compte est disponible directement depuis la page « Mon compte », sans nous contacter. L'export de vos données au format JSON est disponible depuis la même page.",
   },
   {
     title: "Sécurité",

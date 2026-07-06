@@ -6,6 +6,55 @@ export const alt =
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
+const MONO = "ui-monospace, monospace";
+
+function Metric({
+  label,
+  value,
+  unit,
+  delta,
+}: {
+  label: string;
+  value: string;
+  unit: string;
+  delta: string;
+}) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        flex: 1,
+        padding: "22px 26px",
+        borderLeft: "1px solid #1f1f23",
+      }}
+    >
+      <div
+        style={{
+          fontFamily: MONO,
+          fontSize: 17,
+          letterSpacing: 2,
+          color: "#71717a",
+          textTransform: "uppercase",
+        }}
+      >
+        {label}
+      </div>
+      <div style={{ display: "flex", alignItems: "flex-end", gap: 8, marginTop: 10 }}>
+        <span style={{ fontFamily: MONO, fontSize: 40, color: "#fafafa", fontWeight: 600 }}>
+          {value}
+        </span>
+        <span style={{ fontFamily: MONO, fontSize: 18, color: "#71717a", paddingBottom: 6 }}>
+          {unit}
+        </span>
+      </div>
+      <div style={{ fontFamily: MONO, fontSize: 17, color: "#10b981", marginTop: 6 }}>
+        {`▲ ${delta}`}
+      </div>
+    </div>
+  );
+}
+
 export default function OpenGraphImage() {
   return new ImageResponse(
     (
@@ -16,82 +65,86 @@ export default function OpenGraphImage() {
           display: "flex",
           flexDirection: "column",
           justifyContent: "space-between",
-          padding: 80,
-          background:
-            "radial-gradient(1200px 500px at 15% -10%, #065f46 0%, transparent 60%), #0a0a0a",
-          color: "#ffffff",
+          padding: 72,
+          background: "#09090b",
+          color: "#fafafa",
           fontFamily: "sans-serif",
         }}
       >
         {/* Logo */}
-        <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
           <div
             style={{
-              width: 72,
-              height: 72,
-              borderRadius: 18,
+              width: 44,
+              height: 44,
+              borderRadius: 10,
               background: "#059669",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
             }}
           >
-            <svg width="44" height="44" viewBox="0 0 32 32" fill="none">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
               <path
-                d="M5 16h4l3-8 5 16 3-8h7"
+                d="M3 12h4l2-6 4 12 2-6h6"
                 stroke="#ffffff"
-                strokeWidth={2.8}
+                strokeWidth={2.6}
                 strokeLinecap="round"
                 strokeLinejoin="round"
               />
             </svg>
           </div>
-          <div style={{ fontSize: 44, fontWeight: 700, letterSpacing: -1 }}>
+          <div style={{ fontSize: 30, fontWeight: 600, letterSpacing: -0.5 }}>
             {SITE_NAME}
           </div>
         </div>
 
-        {/* Titre principal */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+        {/* Titre */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
           <div
             style={{
-              fontSize: 68,
-              fontWeight: 800,
+              fontSize: 66,
+              fontWeight: 600,
               lineHeight: 1.05,
               letterSpacing: -2,
-              maxWidth: 900,
+              maxWidth: 820,
             }}
           >
-            Reprenez le sport, on s&apos;occupe des calculs.
+            Reprenez le sport. Laissez les chiffres à Trakmetrik.
           </div>
-          <div style={{ fontSize: 32, color: "#a1a1aa", maxWidth: 880 }}>
-            Calories, macros, IMC, séances et suivi de progression — gratuit et
-            respectueux de vos données.
+          <div style={{ fontSize: 27, color: "#a1a1aa", maxWidth: 760 }}>
+            Calories, macros, IMC, séances et progression — un seul tableau de
+            bord, précis et gratuit.
           </div>
         </div>
 
-        {/* Pied */}
+        {/* Bandeau métriques */}
         <div
           style={{
             display: "flex",
-            alignItems: "center",
-            gap: 16,
-            fontSize: 28,
+            border: "1px solid #1f1f23",
+            borderRadius: 14,
+            overflow: "hidden",
           }}
         >
+          <Metric label="Calories" value="2 180" unit="kcal" delta="4,2 %" />
+          <Metric label="Volume" value="4 320" unit="kg" delta="11 %" />
           <div
             style={{
               display: "flex",
-              padding: "10px 22px",
-              borderRadius: 999,
-              background: "#059669",
-              fontWeight: 600,
+              flexDirection: "column",
+              justifyContent: "center",
+              flex: 1,
+              padding: "22px 26px",
+              borderLeft: "1px solid #1f1f23",
             }}
           >
-            100 % gratuit
-          </div>
-          <div style={{ color: "#71717a" }}>
-            {SITE_URL.replace(/^https?:\/\//, "")}
+            <div style={{ fontFamily: MONO, fontSize: 18, color: "#71717a" }}>
+              {SITE_URL.replace(/^https?:\/\//, "")}
+            </div>
+            <div style={{ fontFamily: MONO, fontSize: 18, color: "#10b981", marginTop: 6 }}>
+              100 % gratuit
+            </div>
           </div>
         </div>
       </div>

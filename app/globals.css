@@ -17,7 +17,7 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
+    --background: #09090b;
     --foreground: #ededed;
     --brand: #10b981;
     --brand-strong: #34d399;
@@ -38,31 +38,65 @@ body {
 
 /* Anneau de focus cohérent et accessible sur tout le site. */
 :focus-visible {
-  outline: 2px solid var(--brand);
+  outline: 1px solid var(--brand);
   outline-offset: 2px;
   border-radius: 2px;
 }
 
-/* Aura décorative douce derrière le hero de la vitrine. */
-.hero-aura {
-  background:
-    radial-gradient(
-      50% 55% at 50% -5%,
-      color-mix(in oklab, var(--brand) 20%, transparent),
-      transparent 72%
-    );
+/* ---- Système visuel « analytics » (dark tech, filets fins, grille) ---- */
+
+/* Filet fin réutilisable (couleur de bordure hairline selon le thème). */
+.hairline {
+  --hairline: #e4e4e7;
+  border-color: var(--hairline);
+}
+@media (prefers-color-scheme: dark) {
+  .hairline {
+    --hairline: #1f1f23;
+  }
 }
 
-/* Dégradé de marque réutilisable (badges, accents). */
-.text-gradient-brand {
-  background: linear-gradient(
-    120deg,
-    var(--brand),
-    color-mix(in oklab, var(--brand) 55%, #22d3ee)
+/* Texture de grille technique discrète (fond de sections). */
+.grid-lines {
+  --grid: rgba(9, 9, 11, 0.05);
+  background-image:
+    linear-gradient(to right, var(--grid) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--grid) 1px, transparent 1px);
+  background-size: 56px 56px;
+}
+@media (prefers-color-scheme: dark) {
+  .grid-lines {
+    --grid: rgba(255, 255, 255, 0.035);
+  }
+}
+
+/* Estompe la grille sur les bords pour éviter l'effet « damier ». */
+.grid-fade {
+  -webkit-mask-image: radial-gradient(
+    ellipse 80% 60% at 50% 40%,
+    #000 40%,
+    transparent 100%
   );
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+  mask-image: radial-gradient(
+    ellipse 80% 60% at 50% 40%,
+    #000 40%,
+    transparent 100%
+  );
+}
+
+/* Micro-label technique (eyebrows, entêtes de colonnes, unités). */
+.mono-label {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 0.6875rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+/* Chiffres tabulaires et monospacés pour les métriques. */
+.metric-num {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
 }
 
 /* Data-viz tokens — validated palette (light + dark selected separately). */

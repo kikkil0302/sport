@@ -1,20 +1,39 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { ApiError, backendFetch, deleteAccount, readErrorMessage } from "@/lib/api";
 import {
-  createSession,
+  applySessionCookie,
   credentialsSchema,
   destroySession,
   getSessionUser,
-  hashPassword,
   registerSchema,
-  verifyPassword,
 } from "@/lib/auth";
-import { db } from "@/lib/db";
 import { formValue } from "@/lib/forms";
 
 export interface AuthFormState {
   error?: string;
+}
+
+/** POSTs credentials to the backend and relays its session cookie; null = success. */
+async function authenticate(
+  path: string,
+  payload: Record<string, unknown>,
+): Promise<string | null> {
+  let response: Response;
+  try {
+    response = await backendFetch(path, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  } catch (error) {
+    if (error instanceof ApiError) return error.message;
+    throw error;
+  }
+  if (!response.ok) return readErrorMessage(response);
+
+  await applySessionCookie(response);
+  return null;
 }
 
 export async function registerAction(
@@ -37,20 +56,11 @@ export async function registerAction(
     return { error: parsed.error.issues[0].message };
   }
 
-  const { email, password, displayName } = parsed.data;
-  const existing = await db.user.findUnique({ where: { email } });
-  if (existing) {
-    return { error: "Un compte existe déjà avec cette adresse e-mail." };
-  }
-
-  const user = await db.user.create({
-    data: {
-      email,
-      passwordHash: await hashPassword(password),
-      displayName: displayName ?? null,
-    },
+  const error = await authenticate("/api/auth/register", {
+    ...parsed.data,
+    consent: true,
   });
-  await createSession(user.id);
+  if (error) return { error };
   redirect("/compte");
 }
 
@@ -66,16 +76,8 @@ export async function loginAction(
     return { error: parsed.error.issues[0].message };
   }
 
-  const user = await db.user.findUnique({
-    where: { email: parsed.data.email },
-  });
-  const validPassword =
-    user !== null && (await verifyPassword(parsed.data.password, user.passwordHash));
-  if (!user || !validPassword) {
-    return { error: "E-mail ou mot de passe incorrect." };
-  }
-
-  await createSession(user.id);
+  const error = await authenticate("/api/auth/login", parsed.data);
+  if (error) return { error };
   redirect("/compte");
 }
 
@@ -96,7 +98,12 @@ export async function deleteAccountAction(
     return { error: "Cochez la case de confirmation pour supprimer le compte." };
   }
 
+  try {
+    await deleteAccount();
+  } catch (error) {
+    if (error instanceof ApiError) return { error: error.message };
+    throw error;
+  }
   await destroySession();
-  await db.user.delete({ where: { id: user.id } });
   redirect("/");
 }

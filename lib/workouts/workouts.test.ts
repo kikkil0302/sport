@@ -1,22 +1,5 @@
 import { describe, expect, it } from "vitest";
 import { workoutSetSchema, workoutSchema } from "./schema";
-import { totalVolumeKg } from "./volume";
-
-describe("totalVolumeKg", () => {
-  it("sums reps times weight", () => {
-    expect(
-      totalVolumeKg([
-        { reps: 10, weightKg: 60 },
-        { reps: 8, weightKg: 80 },
-      ]),
-    ).toBe(1240);
-  });
-
-  it("counts bodyweight sets as zero", () => {
-    expect(totalVolumeKg([{ reps: 15, weightKg: null }])).toBe(0);
-    expect(totalVolumeKg([])).toBe(0);
-  });
-});
 
 describe("workoutSchema", () => {
   it("coerces a date string", () => {

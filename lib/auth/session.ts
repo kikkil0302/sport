@@ -1,67 +1,78 @@
-import { createHash, randomBytes } from "node:crypto";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { cache } from "react";
-import { db } from "@/lib/db";
-import type { User } from "@/lib/generated/prisma/client";
+import { ApiError, apiFetch, backendFetch, SESSION_COOKIE } from "@/lib/api/client";
+import type { ApiUser } from "@/lib/api/types";
 
-const SESSION_COOKIE = "fitpilot_session";
-const SESSION_DURATION_MS = 1000 * 60 * 60 * 24 * 30; // 30 days
-
-/** Only a SHA-256 digest of the token is persisted; the raw token stays in the cookie. */
-function hashToken(token: string): string {
-  return createHash("sha256").update(token).digest("hex");
+export interface SessionUser {
+  id: string;
+  email: string;
+  displayName: string | null;
+  createdAt: Date;
 }
 
-export async function createSession(userId: string): Promise<void> {
-  const token = randomBytes(32).toString("base64url");
-  const expiresAt = new Date(Date.now() + SESSION_DURATION_MS);
-
-  await db.session.create({
-    data: { tokenHash: hashToken(token), userId, expiresAt },
-  });
-
-  const cookieStore = await cookies();
-  cookieStore.set(SESSION_COOKIE, token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    path: "/",
-    expires: expiresAt,
-  });
+function toSessionUser(user: ApiUser): SessionUser {
+  return { ...user, createdAt: new Date(user.createdAt) };
 }
 
-/** Returns the authenticated user for the current request, or null. */
-export const getSessionUser = cache(async (): Promise<User | null> => {
+/**
+ * Returns the authenticated user for the current request, or null.
+ * The session itself lives in the Java backend; we only hold its cookie.
+ */
+export const getSessionUser = cache(async (): Promise<SessionUser | null> => {
   const cookieStore = await cookies();
-  const token = cookieStore.get(SESSION_COOKIE)?.value;
-  if (!token) return null;
+  if (!cookieStore.get(SESSION_COOKIE)?.value) return null;
 
-  const session = await db.session.findUnique({
-    where: { tokenHash: hashToken(token) },
-    include: { user: true },
-  });
-  if (!session) return null;
-
-  if (session.expiresAt < new Date()) {
-    await db.session.delete({ where: { id: session.id } });
-    return null;
+  try {
+    return toSessionUser(await apiFetch<ApiUser>("/api/auth/me"));
+  } catch (error) {
+    // 401 = session expirée/invalide ; 503 = backend injoignable → rendu déconnecté.
+    if (error instanceof ApiError) return null;
+    throw error;
   }
-  return session.user;
 });
 
 /** Session user for pages and server actions that require authentication. */
-export async function requireUser(): Promise<User> {
+export async function requireUser(): Promise<SessionUser> {
   const user = await getSessionUser();
   if (!user) redirect("/connexion");
   return user;
 }
 
-export async function destroySession(): Promise<void> {
+/**
+ * Relays the `Set-Cookie` issued by the backend (login/register/logout) onto
+ * the Next.js response, so the browser and the backend share one session.
+ */
+export async function applySessionCookie(response: Response): Promise<void> {
+  const raw = response.headers
+    .getSetCookie()
+    .find((cookie) => cookie.startsWith(`${SESSION_COOKIE}=`));
+  if (!raw) return;
+
+  const token = raw.split(";")[0].slice(SESSION_COOKIE.length + 1);
   const cookieStore = await cookies();
-  const token = cookieStore.get(SESSION_COOKIE)?.value;
-  if (token) {
-    await db.session.deleteMany({ where: { tokenHash: hashToken(token) } });
+  if (!token) {
+    cookieStore.delete(SESSION_COOKIE);
+    return;
   }
+
+  const maxAge = /max-age=(\d+)/i.exec(raw)?.[1];
+  cookieStore.set(SESSION_COOKIE, token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+    maxAge: maxAge ? Number(maxAge) : undefined,
+  });
+}
+
+/** Destroys the backend session (best effort) and always drops the local cookie. */
+export async function destroySession(): Promise<void> {
+  try {
+    await backendFetch("/api/auth/logout", { method: "POST" });
+  } catch {
+    // Backend injoignable : on supprime quand même le cookie local.
+  }
+  const cookieStore = await cookies();
   cookieStore.delete(SESSION_COOKIE);
 }

@@ -2,8 +2,15 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import {
+  addWorkoutSet,
+  ApiError,
+  createWorkout,
+  deleteWorkout,
+  deleteWorkoutSet,
+} from "@/lib/api";
 import { requireUser } from "@/lib/auth";
-import { db } from "@/lib/db";
+import { localDayKey } from "@/lib/dates";
 import { formValue, parseDecimalInput } from "@/lib/forms";
 import { workoutSchema, workoutSetSchema } from "@/lib/workouts/schema";
 
@@ -15,7 +22,7 @@ export async function createWorkoutAction(
   _previous: WorkoutFormState,
   formData: FormData,
 ): Promise<WorkoutFormState> {
-  const user = await requireUser();
+  await requireUser();
 
   const parsed = workoutSchema.safeParse({
     performedAt: formValue(formData, "performedAt") || new Date(),
@@ -25,20 +32,28 @@ export async function createWorkoutAction(
     return { error: parsed.error.issues[0].message };
   }
 
-  const workout = await db.workout.create({
-    data: {
-      userId: user.id,
-      performedAt: parsed.data.performedAt,
-      notes: parsed.data.notes ?? null,
-    },
-  });
+  let workoutId: string;
+  try {
+    const workout = await createWorkout({
+      performedAt: localDayKey(parsed.data.performedAt),
+      notes: parsed.data.notes,
+    });
+    workoutId = workout.id;
+  } catch (error) {
+    if (error instanceof ApiError) return { error: error.message };
+    throw error;
+  }
   revalidatePath("/seances");
-  redirect(`/seances/${workout.id}`);
+  redirect(`/seances/${workoutId}`);
 }
 
 export async function deleteWorkoutAction(workoutId: string): Promise<void> {
-  const user = await requireUser();
-  await db.workout.deleteMany({ where: { id: workoutId, userId: user.id } });
+  await requireUser();
+  try {
+    await deleteWorkout(workoutId);
+  } catch (error) {
+    if (!(error instanceof ApiError)) throw error;
+  }
   revalidatePath("/seances");
   redirect("/seances");
 }
@@ -48,12 +63,7 @@ export async function addSetAction(
   _previous: WorkoutFormState,
   formData: FormData,
 ): Promise<WorkoutFormState> {
-  const user = await requireUser();
-
-  const workout = await db.workout.findUnique({ where: { id: workoutId } });
-  if (!workout || workout.userId !== user.id) {
-    return { error: "Séance introuvable." };
-  }
+  await requireUser();
 
   const parsed = workoutSetSchema.safeParse({
     exerciseId: formValue(formData, "exerciseId"),
@@ -64,39 +74,29 @@ export async function addSetAction(
     return { error: parsed.error.issues[0].message };
   }
 
-  // The exercise must be built-in or belong to the user.
-  const exercise = await db.exercise.findFirst({
-    where: {
-      id: parsed.data.exerciseId,
-      OR: [{ userId: null }, { userId: user.id }],
-    },
-  });
-  if (!exercise) {
-    return { error: "Exercice introuvable." };
-  }
-
-  const setCount = await db.workoutSet.count({ where: { workoutId } });
-  await db.workoutSet.create({
-    data: {
-      workoutId,
-      exerciseId: exercise.id,
-      order: setCount + 1,
+  try {
+    await addWorkoutSet(workoutId, {
+      exerciseId: parsed.data.exerciseId,
       reps: parsed.data.reps,
       weightKg: parsed.data.weightKg ?? null,
-    },
-  });
+    });
+  } catch (error) {
+    if (error instanceof ApiError) return { error: error.message };
+    throw error;
+  }
   revalidatePath(`/seances/${workoutId}`);
   return {};
 }
 
-export async function deleteSetAction(setId: string): Promise<void> {
-  const user = await requireUser();
-  const set = await db.workoutSet.findUnique({
-    where: { id: setId },
-    include: { workout: { select: { id: true, userId: true } } },
-  });
-  if (!set || set.workout.userId !== user.id) return;
-
-  await db.workoutSet.delete({ where: { id: setId } });
-  revalidatePath(`/seances/${set.workout.id}`);
+export async function deleteSetAction(
+  workoutId: string,
+  setId: string,
+): Promise<void> {
+  await requireUser();
+  try {
+    await deleteWorkoutSet(workoutId, setId);
+  } catch (error) {
+    if (!(error instanceof ApiError)) throw error;
+  }
+  revalidatePath(`/seances/${workoutId}`);
 }

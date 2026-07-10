@@ -5,11 +5,9 @@ import { ColumnChart } from "@/components/charts/column-chart";
 import { LineChart, type LineSeries } from "@/components/charts/line-chart";
 import { BodyWeightForm } from "@/components/stats/body-weight-form";
 import { StatTile } from "@/components/stats/stat-tile";
+import { getStats, listBodyWeights } from "@/lib/api";
 import { requireUser } from "@/lib/auth";
-import { db } from "@/lib/db";
-import { exerciseProgression } from "@/lib/stats/progression";
-import { countWithinDays, weeklyVolume } from "@/lib/stats/weekly";
-import { totalVolumeKg } from "@/lib/workouts/volume";
+import { parseDateInput } from "@/lib/dates";
 
 export const metadata: Metadata = {
   title: "Statistiques",
@@ -48,46 +46,13 @@ function ChartCard({
 }
 
 export default async function StatsPage() {
-  const user = await requireUser();
+  await requireUser();
 
-  const [workouts, weights] = await Promise.all([
-    db.workout.findMany({
-      where: { userId: user.id },
-      orderBy: { performedAt: "asc" },
-      include: { sets: { include: { exercise: { select: { name: true } } } } },
-    }),
-    db.bodyWeightEntry.findMany({
-      where: { userId: user.id },
-      orderBy: { measuredAt: "asc" },
-    }),
-  ]);
-
-  const allSets = workouts.flatMap((workout) =>
-    workout.sets.map((set) => ({
-      performedAt: workout.performedAt,
-      exerciseName: set.exercise.name,
-      reps: set.reps,
-      weightKg: set.weightKg,
-    })),
-  );
-
-  // KPI tiles
-  const totalVolume = totalVolumeKg(allSets);
-  const recentWorkouts = countWithinDays(
-    workouts.map((workout) => workout.performedAt),
-    30,
-  );
-  const latestWeight = weights.at(-1);
-  const previousWeight = weights.at(-2);
-  const weightDelta =
-    latestWeight && previousWeight
-      ? latestWeight.weightKg - previousWeight.weightKg
-      : null;
+  const [stats, weights] = await Promise.all([getStats(), listBodyWeights()]);
 
   // Charts
-  const volumePoints = weeklyVolume(allSets, 8);
-  const volumeData = volumePoints.map((point) => ({
-    label: DAY_MONTH.format(point.weekStart),
+  const volumeData = stats.weeklyVolume.map((point) => ({
+    label: DAY_MONTH.format(parseDateInput(point.weekStart)),
     value: point.volumeKg,
   }));
 
@@ -100,8 +65,7 @@ export default async function StatsPage() {
     },
   ];
 
-  const progression = exerciseProgression(allSets, 3);
-  const progressionSeries: LineSeries[] = progression.series.map(
+  const progressionSeries: LineSeries[] = stats.progression.series.map(
     (series, index) => ({
       name: series.exerciseName,
       colorVar: SERIES_COLOR_VARS[index],
@@ -109,7 +73,7 @@ export default async function StatsPage() {
     }),
   );
 
-  const hasAnyData = workouts.length > 0 || weights.length > 0;
+  const hasAnyData = stats.totalWorkouts > 0 || weights.length > 0;
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-12">
@@ -120,20 +84,25 @@ export default async function StatsPage() {
       </p>
 
       <div className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <StatTile label="Séances au total" value={String(workouts.length)} />
-        <StatTile label="Séances (30 derniers jours)" value={String(recentWorkouts)} />
+        <StatTile label="Séances au total" value={String(stats.totalWorkouts)} />
+        <StatTile
+          label="Séances (30 derniers jours)"
+          value={String(stats.workoutsLast30Days)}
+        />
         <StatTile
           label="Volume total soulevé"
-          value={`${NUMBER_FR.format(totalVolume)} kg`}
+          value={`${NUMBER_FR.format(stats.totalVolumeKg)} kg`}
         />
         <StatTile
           label="Poids actuel"
           value={
-            latestWeight ? `${NUMBER_FR.format(latestWeight.weightKg)} kg` : "—"
+            stats.currentWeightKg !== null
+              ? `${NUMBER_FR.format(stats.currentWeightKg)} kg`
+              : "—"
           }
           delta={
-            weightDelta !== null
-              ? `${weightDelta >= 0 ? "+" : ""}${NUMBER_FR.format(weightDelta)} kg vs mesure précédente`
+            stats.weightDeltaKg !== null
+              ? `${stats.weightDeltaKg >= 0 ? "+" : ""}${NUMBER_FR.format(stats.weightDeltaKg)} kg vs mesure précédente`
               : undefined
           }
         />
@@ -167,7 +136,9 @@ export default async function StatsPage() {
         >
           {recentWeights.length >= 2 ? (
             <LineChart
-              labels={recentWeights.map((entry) => DAY_MONTH.format(entry.measuredAt))}
+              labels={recentWeights.map((entry) =>
+                DAY_MONTH.format(new Date(entry.measuredAt)),
+              )}
               series={weightSeries}
               unit="kg"
               ariaLabel="Évolution du poids corporel"
@@ -188,7 +159,7 @@ export default async function StatsPage() {
                     className="flex items-center justify-between gap-4 text-zinc-600 dark:text-zinc-400"
                   >
                     <span>
-                      {FULL_DATE.format(entry.measuredAt)} —{" "}
+                      {FULL_DATE.format(new Date(entry.measuredAt))} —{" "}
                       <span className="font-medium text-zinc-900 dark:text-zinc-100">
                         {NUMBER_FR.format(entry.weightKg)} kg
                       </span>
@@ -212,9 +183,11 @@ export default async function StatsPage() {
           title="Progression de la force"
           subtitle="Meilleur 1RM estimé (formule d'Epley) par jour d'entraînement, sur vos 3 exercices les plus travaillés"
         >
-          {progression.days.length >= 2 ? (
+          {stats.progression.days.length >= 2 ? (
             <LineChart
-              labels={progression.days.map((day) => DAY_MONTH.format(day))}
+              labels={stats.progression.days.map((day) =>
+                DAY_MONTH.format(parseDateInput(day)),
+              )}
               series={progressionSeries}
               unit="kg"
               ariaLabel="Progression du 1RM estimé par exercice"

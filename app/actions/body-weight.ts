@@ -2,8 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import { addBodyWeight, ApiError, deleteBodyWeight } from "@/lib/api";
 import { requireUser } from "@/lib/auth";
-import { db } from "@/lib/db";
+import { localDayKey } from "@/lib/dates";
 import { formValue, parseDecimalInput } from "@/lib/forms";
 import { dateInputSchema } from "@/lib/workouts/schema";
 
@@ -23,7 +24,7 @@ export async function addBodyWeightAction(
   _previous: BodyWeightFormState,
   formData: FormData,
 ): Promise<BodyWeightFormState> {
-  const user = await requireUser();
+  await requireUser();
 
   const parsed = entrySchema.safeParse({
     measuredAt: formValue(formData, "measuredAt") || new Date(),
@@ -33,22 +34,25 @@ export async function addBodyWeightAction(
     return { error: parsed.error.issues[0].message };
   }
 
-  await db.bodyWeightEntry.create({
-    data: {
-      userId: user.id,
-      measuredAt: parsed.data.measuredAt,
+  try {
+    await addBodyWeight({
+      measuredAt: localDayKey(parsed.data.measuredAt),
       weightKg: parsed.data.weightKg,
-    },
-  });
+    });
+  } catch (error) {
+    if (error instanceof ApiError) return { error: error.message };
+    throw error;
+  }
   revalidatePath("/stats");
   return {};
 }
 
 export async function deleteBodyWeightAction(entryId: string): Promise<void> {
-  const user = await requireUser();
-
-  await db.bodyWeightEntry.deleteMany({
-    where: { id: entryId, userId: user.id },
-  });
+  await requireUser();
+  try {
+    await deleteBodyWeight(entryId);
+  } catch (error) {
+    if (!(error instanceof ApiError)) throw error;
+  }
   revalidatePath("/stats");
 }

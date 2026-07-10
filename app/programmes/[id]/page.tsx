@@ -9,9 +9,8 @@ import {
 } from "@/app/actions/programs";
 import { AddSetForm } from "@/components/workouts/add-set-form";
 import { SetsTable } from "@/components/workouts/sets-table";
+import { ApiError, getProgram, listExercises } from "@/lib/api";
 import { requireUser } from "@/lib/auth";
-import { db } from "@/lib/db";
-import { exerciseOptionsFor } from "@/lib/workouts/queries";
 
 export const metadata: Metadata = {
   title: "Programme",
@@ -23,19 +22,17 @@ export default async function ProgrammeDetailPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const user = await requireUser();
+  await requireUser();
   const { id } = await params;
 
   const [program, exercises] = await Promise.all([
-    db.program.findUnique({
-      where: { id },
-      include: {
-        sets: { include: { exercise: true }, orderBy: { order: "asc" } },
-      },
+    getProgram(id).catch((error: unknown) => {
+      if (error instanceof ApiError && error.status === 404) return null;
+      throw error;
     }),
-    exerciseOptionsFor(user.id),
+    listExercises(),
   ]);
-  if (!program || program.userId !== user.id) notFound();
+  if (!program) notFound();
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-12">
@@ -75,11 +72,11 @@ export default async function ProgrammeDetailPage({
         <SetsTable
           sets={program.sets.map((set) => ({
             id: set.id,
-            exerciseName: set.exercise.name,
+            exerciseName: set.exerciseName,
             reps: set.reps,
             weightKg: set.weightKg,
           }))}
-          deleteAction={deleteProgramSetAction}
+          deleteAction={deleteProgramSetAction.bind(null, program.id)}
           emptyMessage="Aucune série — composez le programme ci-dessus."
         />
       </div>

@@ -3,8 +3,15 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import {
+  addProgramSet,
+  ApiError,
+  createProgram,
+  deleteProgram,
+  deleteProgramSet,
+  startProgramWorkout,
+} from "@/lib/api";
 import { requireUser } from "@/lib/auth";
-import { db } from "@/lib/db";
 import { formValue, parseDecimalInput } from "@/lib/forms";
 import { workoutSetSchema } from "@/lib/workouts/schema";
 
@@ -29,7 +36,7 @@ export async function createProgramAction(
   _previous: ProgramFormState,
   formData: FormData,
 ): Promise<ProgramFormState> {
-  const user = await requireUser();
+  await requireUser();
 
   const parsed = programSchema.safeParse({
     name: formValue(formData, "name"),
@@ -39,20 +46,25 @@ export async function createProgramAction(
     return { error: parsed.error.issues[0].message };
   }
 
-  const program = await db.program.create({
-    data: {
-      userId: user.id,
-      name: parsed.data.name,
-      description: parsed.data.description ?? null,
-    },
-  });
+  let programId: string;
+  try {
+    const program = await createProgram(parsed.data);
+    programId = program.id;
+  } catch (error) {
+    if (error instanceof ApiError) return { error: error.message };
+    throw error;
+  }
   revalidatePath("/programmes");
-  redirect(`/programmes/${program.id}`);
+  redirect(`/programmes/${programId}`);
 }
 
 export async function deleteProgramAction(programId: string): Promise<void> {
-  const user = await requireUser();
-  await db.program.deleteMany({ where: { id: programId, userId: user.id } });
+  await requireUser();
+  try {
+    await deleteProgram(programId);
+  } catch (error) {
+    if (!(error instanceof ApiError)) throw error;
+  }
   revalidatePath("/programmes");
   redirect("/programmes");
 }
@@ -62,12 +74,7 @@ export async function addProgramSetAction(
   _previous: ProgramFormState,
   formData: FormData,
 ): Promise<ProgramFormState> {
-  const user = await requireUser();
-
-  const program = await db.program.findUnique({ where: { id: programId } });
-  if (!program || program.userId !== user.id) {
-    return { error: "Programme introuvable." };
-  }
+  await requireUser();
 
   const parsed = workoutSetSchema.safeParse({
     exerciseId: formValue(formData, "exerciseId"),
@@ -78,69 +85,46 @@ export async function addProgramSetAction(
     return { error: parsed.error.issues[0].message };
   }
 
-  const exercise = await db.exercise.findFirst({
-    where: {
-      id: parsed.data.exerciseId,
-      OR: [{ userId: null }, { userId: user.id }],
-    },
-  });
-  if (!exercise) {
-    return { error: "Exercice introuvable." };
-  }
-
-  const setCount = await db.programSet.count({ where: { programId } });
-  await db.programSet.create({
-    data: {
-      programId,
-      exerciseId: exercise.id,
-      order: setCount + 1,
+  try {
+    await addProgramSet(programId, {
+      exerciseId: parsed.data.exerciseId,
       reps: parsed.data.reps,
       weightKg: parsed.data.weightKg ?? null,
-    },
-  });
+    });
+  } catch (error) {
+    if (error instanceof ApiError) return { error: error.message };
+    throw error;
+  }
   revalidatePath(`/programmes/${programId}`);
   return {};
 }
 
-export async function deleteProgramSetAction(setId: string): Promise<void> {
-  const user = await requireUser();
-  const set = await db.programSet.findUnique({
-    where: { id: setId },
-    include: { program: { select: { id: true, userId: true } } },
-  });
-  if (!set || set.program.userId !== user.id) return;
-
-  await db.programSet.delete({ where: { id: setId } });
-  revalidatePath(`/programmes/${set.program.id}`);
+export async function deleteProgramSetAction(
+  programId: string,
+  setId: string,
+): Promise<void> {
+  await requireUser();
+  try {
+    await deleteProgramSet(programId, setId);
+  } catch (error) {
+    if (!(error instanceof ApiError)) throw error;
+  }
+  revalidatePath(`/programmes/${programId}`);
 }
 
-/** Starts a workout from a program: copies its template sets into a new Workout dated now. */
+/** Starts a workout from a program: the backend copies its template sets, dated now. */
 export async function startWorkoutFromProgramAction(
   programId: string,
 ): Promise<void> {
-  const user = await requireUser();
+  await requireUser();
 
-  const program = await db.program.findUnique({
-    where: { id: programId },
-    include: { sets: { orderBy: { order: "asc" } } },
-  });
-  if (!program || program.userId !== user.id) redirect("/programmes");
-
-  const workout = await db.workout.create({
-    data: {
-      userId: user.id,
-      performedAt: new Date(),
-      notes: program.name,
-      sets: {
-        create: program.sets.map((set) => ({
-          exerciseId: set.exerciseId,
-          order: set.order,
-          reps: set.reps,
-          weightKg: set.weightKg,
-        })),
-      },
-    },
-  });
+  let workoutId: string;
+  try {
+    ({ workoutId } = await startProgramWorkout(programId));
+  } catch (error) {
+    if (error instanceof ApiError) redirect("/programmes");
+    throw error;
+  }
   revalidatePath("/seances");
-  redirect(`/seances/${workout.id}`);
+  redirect(`/seances/${workoutId}`);
 }

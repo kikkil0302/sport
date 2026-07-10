@@ -1,9 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { NewWorkoutForm } from "@/components/workouts/new-workout-form";
+import { listWorkouts } from "@/lib/api";
 import { requireUser } from "@/lib/auth";
-import { db } from "@/lib/db";
-import { totalVolumeKg } from "@/lib/workouts/volume";
 
 export const metadata: Metadata = {
   title: "Mes séances",
@@ -13,13 +12,9 @@ export const metadata: Metadata = {
 const DATE_FORMAT = new Intl.DateTimeFormat("fr-FR", { dateStyle: "full" });
 
 export default async function SeancesPage() {
-  const user = await requireUser();
+  await requireUser();
 
-  const workouts = await db.workout.findMany({
-    where: { userId: user.id },
-    orderBy: { performedAt: "desc" },
-    include: { sets: { select: { reps: true, weightKg: true } } },
-  });
+  const workouts = await listWorkouts();
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-12">
@@ -54,12 +49,12 @@ export default async function SeancesPage() {
             >
               <div className="flex items-baseline justify-between gap-4">
                 <span className="font-semibold capitalize">
-                  {DATE_FORMAT.format(workout.performedAt)}
+                  {DATE_FORMAT.format(new Date(workout.performedAt))}
                 </span>
                 <span className="shrink-0 text-sm text-zinc-500 dark:text-zinc-400">
-                  {workout.sets.length} série{workout.sets.length > 1 ? "s" : ""}
+                  {workout.setCount} série{workout.setCount > 1 ? "s" : ""}
                   {" · "}
-                  {totalVolumeKg(workout.sets)} kg de volume
+                  {workout.volumeKg} kg de volume
                 </span>
               </div>
               {workout.notes && (

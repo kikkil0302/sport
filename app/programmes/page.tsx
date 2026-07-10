@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { NewProgramForm } from "@/components/programs/new-program-form";
+import { listPrograms } from "@/lib/api";
 import { requireUser } from "@/lib/auth";
-import { db } from "@/lib/db";
 
 export const metadata: Metadata = {
   title: "Mes programmes",
@@ -10,13 +10,9 @@ export const metadata: Metadata = {
 };
 
 export default async function ProgrammesPage() {
-  const user = await requireUser();
+  await requireUser();
 
-  const programs = await db.program.findMany({
-    where: { userId: user.id },
-    orderBy: { createdAt: "asc" },
-    include: { _count: { select: { sets: true } } },
-  });
+  const programs = await listPrograms();
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-12">
@@ -45,7 +41,7 @@ export default async function ProgrammesPage() {
               <div className="flex items-baseline justify-between gap-4">
                 <span className="font-semibold">{program.name}</span>
                 <span className="shrink-0 text-sm text-zinc-500 dark:text-zinc-400">
-                  {program._count.sets} série{program._count.sets > 1 ? "s" : ""}
+                  {program.setCount} série{program.setCount > 1 ? "s" : ""}
                 </span>
               </div>
               {program.description && (

@@ -8,10 +8,8 @@ import {
 } from "@/app/actions/workouts";
 import { AddSetForm } from "@/components/workouts/add-set-form";
 import { SetsTable } from "@/components/workouts/sets-table";
+import { ApiError, getWorkout, listExercises } from "@/lib/api";
 import { requireUser } from "@/lib/auth";
-import { db } from "@/lib/db";
-import { exerciseOptionsFor } from "@/lib/workouts/queries";
-import { totalVolumeKg } from "@/lib/workouts/volume";
 
 export const metadata: Metadata = {
   title: "Séance",
@@ -25,19 +23,17 @@ export default async function SeanceDetailPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const user = await requireUser();
+  await requireUser();
   const { id } = await params;
 
   const [workout, exercises] = await Promise.all([
-    db.workout.findUnique({
-      where: { id },
-      include: {
-        sets: { include: { exercise: true }, orderBy: { order: "asc" } },
-      },
+    getWorkout(id).catch((error: unknown) => {
+      if (error instanceof ApiError && error.status === 404) return null;
+      throw error;
     }),
-    exerciseOptionsFor(user.id),
+    listExercises(),
   ]);
-  if (!workout || workout.userId !== user.id) notFound();
+  if (!workout) notFound();
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-12">
@@ -49,10 +45,10 @@ export default async function SeanceDetailPage({
       </Link>
       <div className="mt-2 flex items-baseline justify-between gap-4">
         <h1 className="text-3xl font-bold tracking-tight capitalize">
-          {DATE_FORMAT.format(workout.performedAt)}
+          {DATE_FORMAT.format(new Date(workout.performedAt))}
         </h1>
         <span className="shrink-0 text-sm text-zinc-500 dark:text-zinc-400">
-          {totalVolumeKg(workout.sets)} kg de volume
+          {workout.volumeKg} kg de volume
         </span>
       </div>
       {workout.notes && (
@@ -70,11 +66,11 @@ export default async function SeanceDetailPage({
         <SetsTable
           sets={workout.sets.map((set) => ({
             id: set.id,
-            exerciseName: set.exercise.name,
+            exerciseName: set.exerciseName,
             reps: set.reps,
             weightKg: set.weightKg,
           }))}
-          deleteAction={deleteSetAction}
+          deleteAction={deleteSetAction.bind(null, workout.id)}
           emptyMessage="Aucune série — ajoutez la première ci-dessus."
         />
       </div>

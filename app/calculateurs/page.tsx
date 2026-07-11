@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { NutritionCalculator } from "@/components/nutrition-calculator";
 
 const title = "Calculateurs de calories, macros et IMC";
@@ -26,7 +27,15 @@ export default function CalculateursPage() {
       <p className="mt-2 max-w-2xl text-zinc-600 dark:text-zinc-400">
         Besoins caloriques (Mifflin-St Jeor, ou Katch-McArdle si vous
         connaissez votre masse grasse), répartition des macronutriments et IMC
-        selon la classification OMS.
+        selon la classification OMS. Pour transformer ces chiffres en repas
+        concrets, direction le{" "}
+        <Link
+          href="/nutrition"
+          className="text-emerald-600 underline dark:text-emerald-400"
+        >
+          plan alimentaire personnalisé
+        </Link>
+        .
       </p>
       <div className="mt-10">
         <NutritionCalculator />

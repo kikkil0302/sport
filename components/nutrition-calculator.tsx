@@ -1,10 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import {
   ACTIVITY_LABELS,
   ACTIVITY_LEVELS,
   BMI_CATEGORY_LABELS,
+  clearStoredProfile,
+  getServerStoredProfile,
+  getStoredProfile,
   GOAL_LABELS,
   GOALS,
   KCAL_PER_GRAM,
@@ -12,30 +15,21 @@ import {
   buildAdvice,
   computeNutritionPlan,
   planRequestSchema,
+  saveStoredProfile,
+  subscribeStoredProfile,
   type NutritionPlan,
 } from "@/lib/nutrition";
+import { formValue } from "@/lib/forms";
 
-interface FormState {
-  sex: string;
-  age: string;
-  heightCm: string;
-  weightKg: string;
-  bodyFatPercent: string;
-  activityLevel: string;
-  goal: string;
-}
-
-const INITIAL_FORM: FormState = {
-  sex: "male",
-  age: "",
-  heightCm: "",
-  weightKg: "",
-  bodyFatPercent: "",
-  activityLevel: "moderate",
-  goal: "maintain",
-};
-
-type FieldErrors = Partial<Record<keyof FormState, string>>;
+type Field =
+  | "sex"
+  | "age"
+  | "heightCm"
+  | "weightKg"
+  | "bodyFatPercent"
+  | "activityLevel"
+  | "goal";
+type FieldErrors = Partial<Record<Field, string>>;
 
 const NUMBER_REQUIRED = "Veuillez saisir un nombre valide";
 
@@ -47,29 +41,34 @@ function parseNumber(raw: string): number | undefined {
 }
 
 export function NutritionCalculator() {
-  const [form, setForm] = useState<FormState>(INITIAL_FORM);
+  // Profil mémorisé dans CE navigateur uniquement (jamais envoyé au serveur).
+  const stored = useSyncExternalStore(
+    subscribeStoredProfile,
+    getStoredProfile,
+    getServerStoredProfile,
+  );
+
   const [errors, setErrors] = useState<FieldErrors>({});
   const [result, setResult] = useState<{
     plan: NutritionPlan;
     advice: string[];
   } | null>(null);
 
-  const setField = (field: keyof FormState) => (value: string) =>
-    setForm((prev) => ({ ...prev, [field]: value }));
-
-  function handleSubmit(event: React.FormEvent) {
+  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const formData = new FormData(event.currentTarget);
 
-    const age = parseNumber(form.age);
-    const heightCm = parseNumber(form.heightCm);
-    const weightKg = parseNumber(form.weightKg);
-    const bodyFatPercent = parseNumber(form.bodyFatPercent);
+    const rawBodyFat = formValue(formData, "bodyFatPercent");
+    const age = parseNumber(formValue(formData, "age"));
+    const heightCm = parseNumber(formValue(formData, "heightCm"));
+    const weightKg = parseNumber(formValue(formData, "weightKg"));
+    const bodyFatPercent = parseNumber(rawBodyFat);
 
     const missing: FieldErrors = {};
     if (age === undefined) missing.age = NUMBER_REQUIRED;
     if (heightCm === undefined) missing.heightCm = NUMBER_REQUIRED;
     if (weightKg === undefined) missing.weightKg = NUMBER_REQUIRED;
-    if (form.bodyFatPercent.trim() !== "" && bodyFatPercent === undefined) {
+    if (rawBodyFat.trim() !== "" && bodyFatPercent === undefined) {
       missing.bodyFatPercent = NUMBER_REQUIRED;
     }
     if (Object.keys(missing).length > 0) {
@@ -79,19 +78,19 @@ export function NutritionCalculator() {
     }
 
     const parsed = planRequestSchema.safeParse({
-      sex: form.sex,
+      sex: formValue(formData, "sex"),
       age,
       heightCm,
       weightKg,
       bodyFatPercent,
-      activityLevel: form.activityLevel,
-      goal: form.goal,
+      activityLevel: formValue(formData, "activityLevel"),
+      goal: formValue(formData, "goal"),
     });
 
     if (!parsed.success) {
       const fieldErrors: FieldErrors = {};
       for (const issue of parsed.error.issues) {
-        const field = issue.path[0] as keyof FormState | undefined;
+        const field = issue.path[0] as Field | undefined;
         if (field && !fieldErrors[field]) fieldErrors[field] = issue.message;
       }
       setErrors(fieldErrors);
@@ -103,49 +102,64 @@ export function NutritionCalculator() {
     const plan = computeNutritionPlan(profile, activityLevel, goal);
     setErrors({});
     setResult({ plan, advice: buildAdvice(plan) });
+
+    saveStoredProfile({
+      sex: formValue(formData, "sex"),
+      age: formValue(formData, "age"),
+      heightCm: formValue(formData, "heightCm"),
+      weightKg: formValue(formData, "weightKg"),
+      bodyFatPercent: rawBodyFat,
+      activityLevel: formValue(formData, "activityLevel"),
+      goal: formValue(formData, "goal"),
+      restrictions: stored?.restrictions ?? [],
+    });
   }
 
   return (
     <div className="grid gap-8 lg:grid-cols-2">
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form
+        key={stored === null ? "empty" : "stored"}
+        onSubmit={handleSubmit}
+        className="space-y-4"
+      >
         <SelectField
           label="Sexe"
-          value={form.sex}
-          onChange={setField("sex")}
+          name="sex"
+          defaultValue={stored?.sex ?? "male"}
           options={Object.entries(SEX_LABELS)}
         />
         <NumberField
           label="Âge (années)"
-          value={form.age}
-          onChange={setField("age")}
+          name="age"
+          defaultValue={stored?.age ?? ""}
           error={errors.age}
           placeholder="30"
         />
         <NumberField
           label="Taille (cm)"
-          value={form.heightCm}
-          onChange={setField("heightCm")}
+          name="heightCm"
+          defaultValue={stored?.heightCm ?? ""}
           error={errors.heightCm}
           placeholder="175"
         />
         <NumberField
           label="Poids (kg)"
-          value={form.weightKg}
-          onChange={setField("weightKg")}
+          name="weightKg"
+          defaultValue={stored?.weightKg ?? ""}
           error={errors.weightKg}
           placeholder="75"
         />
         <NumberField
           label="Masse grasse (%) — optionnel"
-          value={form.bodyFatPercent}
-          onChange={setField("bodyFatPercent")}
+          name="bodyFatPercent"
+          defaultValue={stored?.bodyFatPercent ?? ""}
           error={errors.bodyFatPercent}
           placeholder="Si connue (mesure, balance impédancemètre)"
         />
         <SelectField
           label="Niveau d'activité"
-          value={form.activityLevel}
-          onChange={setField("activityLevel")}
+          name="activityLevel"
+          defaultValue={stored?.activityLevel ?? "moderate"}
           options={ACTIVITY_LEVELS.map((level) => [
             level,
             ACTIVITY_LABELS[level],
@@ -153,8 +167,8 @@ export function NutritionCalculator() {
         />
         <SelectField
           label="Objectif"
-          value={form.goal}
-          onChange={setField("goal")}
+          name="goal"
+          defaultValue={stored?.goal ?? "maintain"}
           options={GOALS.map((goal) => [goal, GOAL_LABELS[goal]])}
         />
         <button
@@ -166,6 +180,18 @@ export function NutritionCalculator() {
         <p className="text-xs text-zinc-500 dark:text-zinc-400">
           Vos données restent dans votre navigateur : rien n&apos;est envoyé ni
           stocké sur un serveur.
+          {stored !== null && (
+            <>
+              {" "}
+              <button
+                type="button"
+                onClick={clearStoredProfile}
+                className="underline hover:text-zinc-900 dark:hover:text-zinc-100"
+              >
+                Effacer mes infos
+              </button>
+            </>
+          )}
         </p>
       </form>
 
@@ -186,14 +212,14 @@ export function NutritionCalculator() {
 
 function NumberField({
   label,
-  value,
-  onChange,
+  name,
+  defaultValue,
   error,
   placeholder,
 }: {
   label: string;
-  value: string;
-  onChange: (value: string) => void;
+  name: string;
+  defaultValue: string;
   error?: string;
   placeholder?: string;
 }) {
@@ -203,10 +229,10 @@ function NumberField({
       <input
         type="text"
         inputMode="decimal"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
+        name={name}
+        defaultValue={defaultValue}
         placeholder={placeholder}
-        className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm outline-none transition-colors focus:border-zinc-900 dark:focus:border-zinc-100 dark:border-zinc-700 dark:bg-zinc-900"
+        className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm outline-none transition-colors focus:border-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:focus:border-zinc-100"
       />
       {error && <span className="mt-1 block text-xs text-red-500">{error}</span>}
     </label>
@@ -215,22 +241,22 @@ function NumberField({
 
 function SelectField({
   label,
-  value,
-  onChange,
+  name,
+  defaultValue,
   options,
 }: {
   label: string;
-  value: string;
-  onChange: (value: string) => void;
+  name: string;
+  defaultValue: string;
   options: readonly (readonly [string, string])[];
 }) {
   return (
     <label className="block">
       <span className="mb-1 block text-sm font-medium">{label}</span>
       <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm outline-none transition-colors focus:border-zinc-900 dark:focus:border-zinc-100 dark:border-zinc-700 dark:bg-zinc-900"
+        name={name}
+        defaultValue={defaultValue}
+        className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm outline-none transition-colors focus:border-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:focus:border-zinc-100"
       >
         {options.map(([optionValue, optionLabel]) => (
           <option key={optionValue} value={optionValue}>

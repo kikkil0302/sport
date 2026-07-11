@@ -6,3 +6,6 @@ export * from "./plan";
 export * from "./advice";
 export * from "./schema";
 export * from "./labels";
+export * from "./diet";
+export * from "./guide";
+export * from "./profile-storage";

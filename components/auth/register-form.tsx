@@ -13,6 +13,26 @@ export function RegisterForm() {
     INITIAL_STATE,
   );
 
+  if (state.success) {
+    return (
+      <div className="rounded-xl border border-emerald-300 bg-emerald-50 p-6 text-center dark:border-emerald-800 dark:bg-emerald-950">
+        <p className="text-4xl" aria-hidden>
+          ✉️
+        </p>
+        <h2 className="mt-3 font-semibold text-emerald-900 dark:text-emerald-100">
+          Vérifiez votre boîte mail
+        </h2>
+        <p className="mt-2 text-sm text-emerald-800 dark:text-emerald-200">
+          {state.success}
+        </p>
+        <p className="mt-3 text-xs text-emerald-700 dark:text-emerald-300">
+          Rien reçu ? Regardez vos courriers indésirables, ou redemandez un
+          lien depuis la page de connexion.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <form action={formAction} className="space-y-4">
       <TextField

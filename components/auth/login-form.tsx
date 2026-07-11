@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { loginAction, type AuthFormState } from "@/app/actions/auth";
+import { ResendVerification } from "@/components/auth/resend-verification";
 import { TextField } from "@/components/ui/text-field";
 
 const INITIAL_STATE: AuthFormState = {};
@@ -27,6 +28,9 @@ export function LoginForm() {
         autoComplete="current-password"
       />
       {state.error && <p className="text-sm text-red-500">{state.error}</p>}
+      {state.needsVerification && state.email && (
+        <ResendVerification email={state.email} />
+      )}
       <button
         type="submit"
         disabled={pending}

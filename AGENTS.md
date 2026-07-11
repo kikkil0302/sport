@@ -39,6 +39,11 @@ API REST sur `http://localhost:8080`). Le contrat d'API est documenté dans le
   httpOnly `fitpilot_session` (30 j, jeton hashé SHA-256 en base) ; le frontend le
   relaie via `applySessionCookie()` et résout l'utilisateur avec `GET /api/auth/me`
   (`getSessionUser()` en cache React par requête).
+- **Vérification d'e-mail stricte** : l'inscription n'ouvre PAS de session ; le
+  backend envoie un lien SMTP (Mailpit en local, UI http://localhost:8025) vers
+  `/verification?token=…`, dont le bouton (POST volontaire, anti-robots) vérifie
+  puis connecte. Login → 403 tant que non vérifié, avec renvoi possible
+  (`resendVerificationAction`).
 - **Mutations = server actions** (`app/actions/*.ts`) : elles appellent l'API, qui
   revérifie session ET propriété de la ressource. Les formulaires clients utilisent
   `useActionState` ; les boutons de suppression sont des `<form>` avec action liée
@@ -46,6 +51,17 @@ API REST sur `http://localhost:8080`). Le contrat d'API est documenté dans le
 - **Graphiques** : SVG maison dans `components/charts/` (tokens CSS `.viz-root`
   dans `globals.css`, palette validée daltonisme, modes clair/sombre séparés).
   Avant toute modification de graphique, lire le skill `dataviz`.
+- **Icônes musculaires** : SVG maison dans `components/muscle-icon.tsx`
+  (badges colorés par groupe) — pas d'assets externes.
+- **Profil calculateurs** : mémorisé en localStorage via
+  `lib/nutrition/profile-storage.ts`, lu avec `useSyncExternalStore`
+  (formulaires non contrôlés) — jamais envoyé au serveur.
+- **PWA** : `public/sw.js` (navigation réseau-d'abord, secours `/offline` ;
+  statique en cache-first), enregistré en production seulement par
+  `components/pwa-register.tsx` ; icônes PNG générées par
+  `app/icon-{192,512}.png/route.tsx` (ImageResponse).
+- **Convention jours** : weekday 0 = lundi … 6 = dimanche, partagée avec le
+  backend (`lib/dates.ts` : `WEEKDAY_LABELS`, `todayWeekdayIndex`).
 
 ## RGPD (à préserver dans toute évolution)
 
@@ -63,6 +79,10 @@ API REST sur `http://localhost:8080`). Le contrat d'API est documenté dans le
 - eslint `react-hooks/purity` interdit `Date.now()`/`new Date()` dans le rendu des
   composants serveur → mettre la logique temporelle dans un helper `lib/` avec
   paramètre `now` injectable.
+- eslint `react-hooks/set-state-in-effect` interdit `setState` direct dans un
+  `useEffect` → pour l'état initial venant du navigateur (localStorage…),
+  utiliser `useSyncExternalStore` + formulaires non contrôlés (cf.
+  `profile-storage.ts`).
 - Les dates « calendrier » (séance, pesée) transitent en `"YYYY-MM-DD"` (LocalDate) ;
   les instants en ISO. Parser les LocalDate avec `parseDateInput()` (minuit local),
   jamais `new Date("YYYY-MM-DD")` (minuit UTC → décalage de jour à l'affichage).

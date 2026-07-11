@@ -28,3 +28,19 @@ export function todayInputValue(): string {
 export function currentYear(now: Date = new Date()): number {
   return now.getFullYear();
 }
+
+/** French weekday labels, index 0 = lundi (same convention as the backend). */
+export const WEEKDAY_LABELS = [
+  "Lundi",
+  "Mardi",
+  "Mercredi",
+  "Jeudi",
+  "Vendredi",
+  "Samedi",
+  "Dimanche",
+] as const;
+
+/** Today's weekday index, 0 = lundi … 6 = dimanche. */
+export function todayWeekdayIndex(now: Date = new Date()): number {
+  return (now.getDay() + 6) % 7;
+}

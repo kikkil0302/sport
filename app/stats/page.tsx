@@ -3,9 +3,11 @@ import Link from "next/link";
 import { deleteBodyWeightAction } from "@/app/actions/body-weight";
 import { ColumnChart } from "@/components/charts/column-chart";
 import { LineChart, type LineSeries } from "@/components/charts/line-chart";
+import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
 import { BodyWeightForm } from "@/components/stats/body-weight-form";
 import { StatTile } from "@/components/stats/stat-tile";
-import { getStats, listBodyWeights } from "@/lib/api";
+import { MuscleBadge } from "@/components/muscle-icon";
+import { getStats, listBodyWeights, listRecords } from "@/lib/api";
 import { requireUser } from "@/lib/auth";
 import { parseDateInput } from "@/lib/dates";
 
@@ -48,7 +50,11 @@ function ChartCard({
 export default async function StatsPage() {
   await requireUser();
 
-  const [stats, weights] = await Promise.all([getStats(), listBodyWeights()]);
+  const [stats, weights, records] = await Promise.all([
+    getStats(),
+    listBodyWeights(),
+    listRecords(),
+  ]);
 
   // Charts
   const volumeData = stats.weeklyVolume.map((point) => ({
@@ -165,12 +171,13 @@ export default async function StatsPage() {
                       </span>
                     </span>
                     <form action={deleteBodyWeightAction.bind(null, entry.id)}>
-                      <button
-                        type="submit"
+                      <ConfirmSubmitButton
                         className="text-xs text-red-500 hover:underline"
+                        confirmMessage={`Supprimer la pesée du ${FULL_DATE.format(new Date(entry.measuredAt))} ?`}
+                        aria-label={`Supprimer la pesée du ${FULL_DATE.format(new Date(entry.measuredAt))}`}
                       >
                         Supprimer
-                      </button>
+                      </ConfirmSubmitButton>
                     </form>
                   </li>
                 ))}
@@ -178,6 +185,39 @@ export default async function StatsPage() {
             )}
           </div>
         </ChartCard>
+
+        {records.length > 0 && (
+          <ChartCard
+            title="Records personnels 🏆"
+            subtitle="Meilleure charge et meilleur 1RM estimé (Epley) par exercice — séries avec charge uniquement"
+          >
+            <ul className="divide-y divide-zinc-200 dark:divide-zinc-800">
+              {records.map((record) => (
+                <li
+                  key={record.exerciseId}
+                  className="flex items-center gap-3 py-3"
+                >
+                  <MuscleBadge group={record.muscleGroup} size="sm" />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-medium">{record.exerciseName}</p>
+                    <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                      {FULL_DATE.format(new Date(record.achievedAt))}
+                    </p>
+                  </div>
+                  <div className="shrink-0 text-right text-sm">
+                    <p className="font-semibold">
+                      {NUMBER_FR.format(record.maxWeightKg)} kg ×{" "}
+                      {record.maxWeightReps}
+                    </p>
+                    <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                      1RM estimé : {NUMBER_FR.format(record.bestOneRepMaxKg)} kg
+                    </p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </ChartCard>
+        )}
 
         <ChartCard
           title="Progression de la force"

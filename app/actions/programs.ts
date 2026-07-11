@@ -9,10 +9,13 @@ import {
   createProgram,
   deleteProgram,
   deleteProgramSet,
+  listExercises,
   startProgramWorkout,
+  updateProgramWeekday,
 } from "@/lib/api";
 import { requireUser } from "@/lib/auth";
 import { formValue, parseDecimalInput } from "@/lib/forms";
+import { getProgramTemplate } from "@/lib/programs/templates";
 import { workoutSetSchema } from "@/lib/workouts/schema";
 
 export interface ProgramFormState {
@@ -110,6 +113,80 @@ export async function deleteProgramSetAction(
     if (!(error instanceof ApiError)) throw error;
   }
   revalidatePath(`/programmes/${programId}`);
+}
+
+/** Planifie le programme sur un jour de la semaine ("" = déplanifie). */
+export async function planProgramAction(
+  programId: string,
+  formData: FormData,
+): Promise<void> {
+  await requireUser();
+
+  const raw = formValue(formData, "weekday");
+  const weekday = raw === "" ? null : Number(raw);
+  if (weekday !== null && (!Number.isInteger(weekday) || weekday < 0 || weekday > 6)) {
+    return;
+  }
+
+  try {
+    await updateProgramWeekday(programId, weekday);
+  } catch (error) {
+    if (!(error instanceof ApiError)) throw error;
+  }
+  revalidatePath(`/programmes/${programId}`);
+  revalidatePath("/programmes");
+  revalidatePath("/seances");
+}
+
+/**
+ * Creates a real program from a ready-made template: resolves catalog
+ * exercises by name, then adds one program row per working set.
+ */
+export async function createProgramFromTemplateAction(
+  _previous: ProgramFormState,
+  formData: FormData,
+): Promise<ProgramFormState> {
+  await requireUser();
+
+  const template = getProgramTemplate(formValue(formData, "templateId"));
+  if (!template) {
+    return { error: "Choisissez un programme dans la liste." };
+  }
+
+  let programId: string;
+  try {
+    const exercises = await listExercises();
+    const idsByName = new Map(
+      exercises.map((exercise) => [exercise.name, exercise.id]),
+    );
+    const missing = template.exercises.filter(
+      ({ exercise }) => !idsByName.has(exercise),
+    );
+    if (missing.length > 0) {
+      return {
+        error: `Exercice introuvable dans le catalogue : ${missing[0].exercise}.`,
+      };
+    }
+
+    const program = await createProgram({
+      name: template.name,
+      description: template.description,
+    });
+    programId = program.id;
+
+    // Sequential on purpose: the backend assigns the set order by insertion.
+    for (const { exercise, sets, reps } of template.exercises) {
+      const exerciseId = idsByName.get(exercise)!;
+      for (let i = 0; i < sets; i++) {
+        await addProgramSet(programId, { exerciseId, reps, weightKg: null });
+      }
+    }
+  } catch (error) {
+    if (error instanceof ApiError) return { error: error.message };
+    throw error;
+  }
+  revalidatePath("/programmes");
+  redirect(`/programmes/${programId}`);
 }
 
 /** Starts a workout from a program: the backend copies its template sets, dated now. */

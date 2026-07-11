@@ -22,6 +22,25 @@ export interface SetResponse {
   order: number;
   reps: number;
   weightKg: number | null;
+  /** Vrai quand la série vient de battre le meilleur 1RM estimé de l'exercice. */
+  record: boolean;
+}
+
+/** Dernière séance où l'exercice apparaît, avec ses séries. */
+export interface LastPerformance {
+  exerciseId: string;
+  performedAt: string;
+  sets: { reps: number; weightKg: number | null }[];
+}
+
+export interface PersonalRecord {
+  exerciseId: string;
+  exerciseName: string;
+  muscleGroup: string;
+  maxWeightKg: number;
+  maxWeightReps: number;
+  bestOneRepMaxKg: number;
+  achievedAt: string;
 }
 
 export interface WorkoutSummary {
@@ -46,6 +65,8 @@ export interface ProgramSummary {
   description: string | null;
   createdAt: string;
   setCount: number;
+  /** 0 = lundi … 6 = dimanche, null = non planifié. */
+  weekday: number | null;
 }
 
 export interface ProgramDetail {
@@ -53,6 +74,7 @@ export interface ProgramDetail {
   name: string;
   description: string | null;
   createdAt: string;
+  weekday: number | null;
   sets: SetResponse[];
 }
 

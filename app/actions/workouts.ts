@@ -8,6 +8,8 @@ import {
   createWorkout,
   deleteWorkout,
   deleteWorkoutSet,
+  duplicateWorkout,
+  updateWorkoutSet,
 } from "@/lib/api";
 import { requireUser } from "@/lib/auth";
 import { localDayKey } from "@/lib/dates";
@@ -16,6 +18,10 @@ import { workoutSchema, workoutSetSchema } from "@/lib/workouts/schema";
 
 export interface WorkoutFormState {
   error?: string;
+  /** Vrai quand la dernière série enregistrée bat le meilleur 1RM de l'exercice. */
+  record?: boolean;
+  /** Marqueur de succès pour l'édition en séance (affiche « enregistré »). */
+  saved?: boolean;
 }
 
 export async function createWorkoutAction(
@@ -74,18 +80,68 @@ export async function addSetAction(
     return { error: parsed.error.issues[0].message };
   }
 
+  let record = false;
   try {
-    await addWorkoutSet(workoutId, {
+    const set = await addWorkoutSet(workoutId, {
       exerciseId: parsed.data.exerciseId,
       reps: parsed.data.reps,
       weightKg: parsed.data.weightKg ?? null,
     });
+    record = set.record;
   } catch (error) {
     if (error instanceof ApiError) return { error: error.message };
     throw error;
   }
   revalidatePath(`/seances/${workoutId}`);
-  return {};
+  return { record };
+}
+
+/** Édition d'une série en cours de séance : réps réalisées + charge. */
+export async function updateSetAction(
+  workoutId: string,
+  setId: string,
+  _previous: WorkoutFormState,
+  formData: FormData,
+): Promise<WorkoutFormState> {
+  await requireUser();
+
+  const parsed = workoutSetSchema.omit({ exerciseId: true }).safeParse({
+    reps: Number(formValue(formData, "reps")),
+    weightKg: parseDecimalInput(formValue(formData, "weightKg")),
+  });
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0].message };
+  }
+
+  let record = false;
+  try {
+    const set = await updateWorkoutSet(workoutId, setId, {
+      reps: parsed.data.reps,
+      weightKg: parsed.data.weightKg ?? null,
+    });
+    record = set.record;
+  } catch (error) {
+    if (error instanceof ApiError) return { error: error.message };
+    throw error;
+  }
+  revalidatePath(`/seances/${workoutId}`);
+  return { saved: true, record };
+}
+
+/** « Refaire cette séance » : duplique les séries dans une séance datée maintenant. */
+export async function duplicateWorkoutAction(workoutId: string): Promise<void> {
+  await requireUser();
+
+  let newWorkoutId: string;
+  try {
+    const copy = await duplicateWorkout(workoutId);
+    newWorkoutId = copy.id;
+  } catch (error) {
+    if (error instanceof ApiError) redirect("/seances");
+    throw error;
+  }
+  revalidatePath("/seances");
+  redirect(`/seances/${newWorkoutId}`);
 }
 
 export async function deleteSetAction(

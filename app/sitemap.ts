@@ -9,6 +9,7 @@ const ROUTES: {
 }[] = [
   { path: "/", changeFrequency: "weekly", priority: 1 },
   { path: "/calculateurs", changeFrequency: "monthly", priority: 0.9 },
+  { path: "/nutrition", changeFrequency: "monthly", priority: 0.9 },
   { path: "/inscription", changeFrequency: "yearly", priority: 0.6 },
   { path: "/connexion", changeFrequency: "yearly", priority: 0.4 },
   { path: "/confidentialite", changeFrequency: "yearly", priority: 0.3 },

@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { NewProgramForm } from "@/components/programs/new-program-form";
+import { TemplatePicker } from "@/components/programs/template-picker";
 import { listPrograms } from "@/lib/api";
 import { requireUser } from "@/lib/auth";
+import { WEEKDAY_LABELS } from "@/lib/dates";
 
 export const metadata: Metadata = {
   title: "Mes programmes",
@@ -22,9 +24,22 @@ export default async function ProgrammesPage() {
         fois, puis démarrez vos séances en un clic avec les séries pré-remplies.
       </p>
 
-      <div className="mt-8">
-        <NewProgramForm />
-      </div>
+      <section className="mt-8">
+        <h2 className="font-semibold">Programmes prêts à l&apos;emploi</h2>
+        <p className="mt-1 mb-3 text-sm text-zinc-600 dark:text-zinc-400">
+          Choisissez un type de séance (full body, push, pull…) ou un muscle à
+          cibler : le programme est généré avec des exercices, séries et
+          répétitions recommandés, puis reste modifiable.
+        </p>
+        <TemplatePicker />
+      </section>
+
+      <section className="mt-8">
+        <h2 className="font-semibold">Ou composez le vôtre</h2>
+        <div className="mt-3">
+          <NewProgramForm />
+        </div>
+      </section>
 
       <div className="mt-8 space-y-3">
         {programs.length === 0 ? (
@@ -39,7 +54,14 @@ export default async function ProgrammesPage() {
               className="block rounded-xl border border-zinc-200 bg-white p-4 transition-colors hover:border-emerald-400 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-emerald-600"
             >
               <div className="flex items-baseline justify-between gap-4">
-                <span className="font-semibold">{program.name}</span>
+                <span className="flex items-baseline gap-2 font-semibold">
+                  {program.name}
+                  {program.weekday !== null && (
+                    <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
+                      {WEEKDAY_LABELS[program.weekday]}
+                    </span>
+                  )}
+                </span>
                 <span className="shrink-0 text-sm text-zinc-500 dark:text-zinc-400">
                   {program.setCount} série{program.setCount > 1 ? "s" : ""}
                 </span>

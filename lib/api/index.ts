@@ -2,8 +2,11 @@ import { apiFetch } from "./client";
 import type {
   BodyWeightEntry,
   ExerciseOption,
+  LastPerformance,
+  PersonalRecord,
   ProgramDetail,
   ProgramSummary,
+  SetResponse,
   StatsResponse,
   WorkoutDetail,
   WorkoutSummary,
@@ -16,6 +19,27 @@ export type * from "./types";
 
 export function listExercises(): Promise<ExerciseOption[]> {
   return apiFetch("/api/exercises");
+}
+
+export function createExercise(input: {
+  name: string;
+  muscleGroup: string;
+}): Promise<ExerciseOption> {
+  return apiFetch("/api/exercises", { method: "POST", body: JSON.stringify(input) });
+}
+
+/** « La dernière fois » : dernière séance par exercice (hors séance consultée). */
+export function listLastPerformances(
+  excludeWorkoutId?: string,
+): Promise<LastPerformance[]> {
+  const query = excludeWorkoutId
+    ? `?excludeWorkout=${encodeURIComponent(excludeWorkoutId)}`
+    : "";
+  return apiFetch(`/api/exercises/last-performances${query}`);
+}
+
+export function listRecords(): Promise<PersonalRecord[]> {
+  return apiFetch("/api/records");
 }
 
 // Workouts
@@ -45,15 +69,35 @@ export interface AddSetInput {
   weightKg: number | null;
 }
 
-export function addWorkoutSet(workoutId: string, input: AddSetInput): Promise<void> {
+export function addWorkoutSet(
+  workoutId: string,
+  input: AddSetInput,
+): Promise<SetResponse> {
   return apiFetch(`/api/workouts/${workoutId}/sets`, {
     method: "POST",
     body: JSON.stringify(input),
   });
 }
 
+/** Mise à jour d'une série en séance (réps réalisées + charge). */
+export function updateWorkoutSet(
+  workoutId: string,
+  setId: string,
+  input: { reps: number; weightKg: number | null },
+): Promise<SetResponse> {
+  return apiFetch(`/api/workouts/${workoutId}/sets/${setId}`, {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
+}
+
 export function deleteWorkoutSet(workoutId: string, setId: string): Promise<void> {
   return apiFetch(`/api/workouts/${workoutId}/sets/${setId}`, { method: "DELETE" });
+}
+
+/** « Refaire cette séance » : copie les séries en nouvelle séance datée maintenant. */
+export function duplicateWorkout(workoutId: string): Promise<WorkoutDetail> {
+  return apiFetch(`/api/workouts/${workoutId}/duplicate`, { method: "POST" });
 }
 
 // Programs
@@ -75,6 +119,17 @@ export function createProgram(input: {
 
 export function deleteProgram(id: string): Promise<void> {
   return apiFetch(`/api/programs/${id}`, { method: "DELETE" });
+}
+
+/** Planifie le programme sur un jour (0 = lundi … 6 = dimanche, null = aucun). */
+export function updateProgramWeekday(
+  id: string,
+  weekday: number | null,
+): Promise<ProgramDetail> {
+  return apiFetch(`/api/programs/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify({ weekday }),
+  });
 }
 
 export function addProgramSet(programId: string, input: AddSetInput): Promise<void> {

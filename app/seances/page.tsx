@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { startWorkoutFromProgramAction } from "@/app/actions/programs";
 import { NewWorkoutForm } from "@/components/workouts/new-workout-form";
-import { listWorkouts } from "@/lib/api";
+import { listPrograms, listWorkouts } from "@/lib/api";
 import { requireUser } from "@/lib/auth";
+import { todayWeekdayIndex, WEEKDAY_LABELS } from "@/lib/dates";
 
 export const metadata: Metadata = {
   title: "Mes séances",
@@ -14,7 +16,12 @@ const DATE_FORMAT = new Intl.DateTimeFormat("fr-FR", { dateStyle: "full" });
 export default async function SeancesPage() {
   await requireUser();
 
-  const workouts = await listWorkouts();
+  const [workouts, programs] = await Promise.all([listWorkouts(), listPrograms()]);
+
+  const today = todayWeekdayIndex();
+  const plannedToday = programs.filter(
+    (program) => program.weekday === today && program.setCount > 0,
+  );
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-12">
@@ -31,6 +38,29 @@ export default async function SeancesPage() {
         .
       </p>
 
+      {plannedToday.length > 0 && (
+        <section className="mt-8 rounded-xl border border-emerald-300 bg-emerald-50 p-5 dark:border-emerald-800 dark:bg-emerald-950">
+          <h2 className="font-semibold text-emerald-900 dark:text-emerald-100">
+            Au programme aujourd&apos;hui ({WEEKDAY_LABELS[today].toLowerCase()})
+          </h2>
+          <div className="mt-3 flex flex-wrap gap-3">
+            {plannedToday.map((program) => (
+              <form
+                key={program.id}
+                action={startWorkoutFromProgramAction.bind(null, program.id)}
+              >
+                <button
+                  type="submit"
+                  className="h-11 rounded-lg bg-emerald-600 px-4 text-sm font-semibold text-white transition-colors hover:bg-emerald-700"
+                >
+                  Démarrer « {program.name} »
+                </button>
+              </form>
+            ))}
+          </div>
+        </section>
+      )}
+
       <div className="mt-8">
         <NewWorkoutForm />
       </div>
@@ -45,7 +75,7 @@ export default async function SeancesPage() {
             <Link
               key={workout.id}
               href={`/seances/${workout.id}`}
-              className="block rounded-xl border border-zinc-200 bg-white p-4 transition-colors hover:border-emerald-400 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-emerald-600"
+              className="block rounded-xl border border-zinc-200 bg-white p-5 transition-colors hover:border-emerald-400 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-emerald-600"
             >
               <div className="flex items-baseline justify-between gap-4">
                 <span className="font-semibold capitalize">

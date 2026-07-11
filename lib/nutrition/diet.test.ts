@@ -4,6 +4,7 @@ import {
   DIET_RESTRICTIONS,
   FOODS,
   isAllowed,
+  macroKcal,
   type DietRestriction,
 } from "./diet";
 import type { MacroTargets } from "./types";
@@ -129,5 +130,33 @@ describe("buildDietPlan", () => {
       carbsG: 300,
       fatG: 67,
     });
+  });
+
+  it("does not crash with zero macros (degenerate edge case)", () => {
+    const plan = buildDietPlan(0, { proteinG: 0, carbsG: 0, fatG: 0 }, []);
+    expect(plan.meals).toHaveLength(4);
+    // Calculated slots collapse to 0 g; only fixed-portion foods (veg/fruit) remain.
+    for (const meal of plan.meals) {
+      for (const item of meal.items) {
+        expect(item.grams).toBeGreaterThanOrEqual(5);
+      }
+    }
+  });
+
+  it("never proposes an animal product in a vegan plan", () => {
+    const plan = buildDietPlan(TARGET_CALORIES, TARGET_MACROS, ["vegan"]);
+    for (const meal of plan.meals) {
+      for (const item of meal.items) {
+        expect(item.food.suitableFor.vegan, item.food.name).toBe(true);
+      }
+    }
+  });
+});
+
+describe("macroKcal", () => {
+  it("applies 4/4/9 kcal per gram", () => {
+    expect(macroKcal({ proteinG: 150, carbsG: 300, fatG: 67 })).toBe(
+      150 * 4 + 300 * 4 + 67 * 9,
+    );
   });
 });

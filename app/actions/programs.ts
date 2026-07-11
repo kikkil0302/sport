@@ -174,12 +174,19 @@ export async function createProgramFromTemplateAction(
     });
     programId = program.id;
 
-    // Sequential on purpose: the backend assigns the set order by insertion.
-    for (const { exercise, sets, reps } of template.exercises) {
-      const exerciseId = idsByName.get(exercise)!;
-      for (let i = 0; i < sets; i++) {
-        await addProgramSet(programId, { exerciseId, reps, weightKg: null });
+    try {
+      // Sequential on purpose: the backend assigns the set order by insertion.
+      for (const { exercise, sets, reps } of template.exercises) {
+        const exerciseId = idsByName.get(exercise)!;
+        for (let i = 0; i < sets; i++) {
+          await addProgramSet(programId, { exerciseId, reps, weightKg: null });
+        }
       }
+    } catch (error) {
+      // Échec en cours de remplissage : on annule la création (best effort)
+      // pour ne pas laisser un programme à moitié vide dans la liste.
+      await deleteProgram(programId).catch(() => {});
+      throw error;
     }
   } catch (error) {
     if (error instanceof ApiError) return { error: error.message };

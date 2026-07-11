@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import Link from "next/link";
+import { PwaRegister } from "@/components/pwa-register";
 import { SiteHeader } from "@/components/site-header";
 import { currentYear } from "@/lib/dates";
 import {
@@ -75,6 +76,7 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col font-sans">
+        <PwaRegister />
         <SiteHeader />
         <main className="flex-1">{children}</main>
         <footer className="border-t border-zinc-200 dark:border-zinc-800">

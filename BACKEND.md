@@ -1,9 +1,11 @@
 # Backend Trakmetrik — modèle relationnel & script PostgreSQL
 
-Ce document décrit le modèle de données du backend, indépendamment de l'ORM.
-La source de vérité en développement reste `prisma/schema.prisma` (SQLite) ;
-ce fichier fournit l'équivalent **PostgreSQL** pour un déploiement en production
-ou une reprise du backend dans une autre stack.
+Ce document décrit le modèle de données du backend, indépendamment de la stack.
+La **source de vérité** est désormais le backend Spring Boot
+(`C:\Users\xrang\IdeaProjects\sport`) : le schéma est géré par les migrations
+**Flyway** (`src/main/resources/db/migration/V*.sql`), Hibernate ne touche jamais
+au DDL (`spring.jpa.hibernate.ddl-auto=none`). Ce fichier fournit l'équivalent
+PostgreSQL consolidé (V1 + durcissement V5) pour lecture/reprise.
 
 ## Vue d'ensemble
 
@@ -75,8 +77,8 @@ erDiagram
     body_weight_entries {
         text id PK
         text user_id FK
-        timestamptz measured_at
-        double weight_kg
+        date measured_at "jour calendaire, unique par user"
+        numeric weight_kg
     }
     programs {
         text id PK
@@ -97,20 +99,28 @@ erDiagram
 
 ## Choix de conception
 
-- **Clés primaires `TEXT`** : les identifiants sont des cuid générés côté
-  application (comportement Prisma actuel). Alternative pur-SQL : `UUID`
-  avec `DEFAULT gen_random_uuid()` — adapter alors le code applicatif.
-- **`set_order` et non `order`** : `order` est un mot réservé SQL. Côté
-  Prisma, mapper avec `order Int @map("set_order")`.
-- **`weight_kg NULL`** = série au poids du corps (comptée 0 dans le volume).
+- **Clés primaires `TEXT`** : identifiants générés côté application
+  (`fr.sport.common.Ids`). Alternative pur-SQL : `UUID` avec
+  `DEFAULT gen_random_uuid()` — adapter alors le code applicatif.
+- **`set_order` et non `order`** : `order` est un mot réservé SQL. Unique par
+  séance/programme ; l'application assigne `max(set_order) + 1` (jamais
+  `count + 1`, qui entrerait en collision après une suppression).
+- **`weight_kg NUMERIC(5,2)`** = charge décimale exacte ; `NULL` = série au
+  poids du corps (comptée 0 dans le volume).
+- **`muscle_group` contraint** à un référentiel de 9 valeurs, miroir du
+  frontend (`components/muscle-icon.tsx` + formulaire d'exercice personnel) —
+  garantit un badge cohérent.
+- **Une pesée par jour** : `body_weight_entries.measured_at` est une `DATE`
+  (jour calendaire, pas un instant), avec `UNIQUE (user_id, measured_at)` ;
+  re-peser le même jour fait un **upsert** applicatif.
 - **Exercices intégrés vs perso** : `user_id NULL` = catalogue commun.
   L'unicité `(name, user_id)` ne couvre pas les `NULL` en SQL standard →
   un **index unique partiel** garantit l'unicité des noms du catalogue intégré.
 - **`ON DELETE RESTRICT`** sur `exercise_id` : on ne supprime pas un exercice
   encore référencé par des séries (le catalogue intégré n'est jamais supprimé).
-- **`timestamptz`** partout : les dates « calendrier » (séance, pesée) sont
-  stockées à minuit **heure locale de saisie** ; l'application fait le
-  regroupement par jour/semaine en local (`lib/dates.ts`).
+- **Instants vs jours** : `performed_at`/`created_at` sont des `TIMESTAMPTZ`
+  (instants) ; les pesées, purement calendaires, sont des `DATE`.
+  L'application regroupe par jour/semaine en local (`lib/dates.ts`).
 - **Contraintes `CHECK`** : miroir SQL des validations zod (`lib/*/schema.ts`),
   en défense en profondeur — la validation applicative reste la première ligne.
 
@@ -132,6 +142,9 @@ CREATE TABLE users (
     created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- Unicité e-mail insensible à la casse (l'app normalise déjà en minuscules).
+CREATE UNIQUE INDEX users_email_lower_key ON users (lower(email));
+
 -- ------------------------------------------------------------- sessions
 CREATE TABLE sessions (
     id         TEXT PRIMARY KEY,
@@ -147,7 +160,9 @@ CREATE INDEX sessions_user_id_idx ON sessions (user_id);
 CREATE TABLE exercises (
     id           TEXT PRIMARY KEY,
     name         TEXT NOT NULL CHECK (char_length(name) BETWEEN 1 AND 100),
-    muscle_group TEXT NOT NULL,
+    muscle_group TEXT NOT NULL CHECK (muscle_group IN (
+                     'Jambes', 'Dos', 'Pectoraux', 'Épaules', 'Biceps',
+                     'Triceps', 'Abdominaux', 'Cardio', 'Autre')),
     user_id      TEXT REFERENCES users (id) ON DELETE CASCADE  -- NULL = exercice intégré
 );
 
@@ -171,11 +186,12 @@ CREATE INDEX workouts_user_id_performed_at_idx ON workouts (user_id, performed_a
 -- --------------------------------------------------------- workout_sets
 CREATE TABLE workout_sets (
     id          TEXT PRIMARY KEY,
-    workout_id  TEXT             NOT NULL REFERENCES workouts (id)  ON DELETE CASCADE,
-    exercise_id TEXT             NOT NULL REFERENCES exercises (id) ON DELETE RESTRICT,
-    set_order   INTEGER          NOT NULL CHECK (set_order >= 1),
-    reps        INTEGER          NOT NULL CHECK (reps BETWEEN 1 AND 200),
-    weight_kg   DOUBLE PRECISION          CHECK (weight_kg BETWEEN 0 AND 600)  -- NULL = poids du corps
+    workout_id  TEXT          NOT NULL REFERENCES workouts (id)  ON DELETE CASCADE,
+    exercise_id TEXT          NOT NULL REFERENCES exercises (id) ON DELETE RESTRICT,
+    set_order   INTEGER       NOT NULL CHECK (set_order >= 1),
+    reps        INTEGER       NOT NULL CHECK (reps BETWEEN 1 AND 200),
+    weight_kg   NUMERIC(5,2)           CHECK (weight_kg BETWEEN 0 AND 600),  -- NULL = poids du corps
+    UNIQUE (workout_id, set_order)                                          -- ordre non ambigu
 );
 
 CREATE INDEX workout_sets_workout_id_idx  ON workout_sets (workout_id);
@@ -183,14 +199,12 @@ CREATE INDEX workout_sets_exercise_id_idx ON workout_sets (exercise_id);
 
 -- -------------------------------------------------- body_weight_entries
 CREATE TABLE body_weight_entries (
-    id          TEXT             PRIMARY KEY,
-    user_id     TEXT             NOT NULL REFERENCES users (id) ON DELETE CASCADE,
-    measured_at TIMESTAMPTZ      NOT NULL,
-    weight_kg   DOUBLE PRECISION NOT NULL CHECK (weight_kg BETWEEN 20 AND 400)
+    id          TEXT         PRIMARY KEY,
+    user_id     TEXT         NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+    measured_at DATE         NOT NULL,                               -- jour calendaire
+    weight_kg   NUMERIC(5,2) NOT NULL CHECK (weight_kg BETWEEN 20 AND 400),
+    UNIQUE (user_id, measured_at)                                    -- une pesée par jour
 );
-
-CREATE INDEX body_weight_entries_user_id_measured_at_idx
-    ON body_weight_entries (user_id, measured_at);
 
 -- ------------------------------------------------------------- programs
 CREATE TABLE programs (
@@ -206,11 +220,12 @@ CREATE INDEX programs_user_id_idx ON programs (user_id);
 -- --------------------------------------------------------- program_sets
 CREATE TABLE program_sets (
     id          TEXT PRIMARY KEY,
-    program_id  TEXT             NOT NULL REFERENCES programs (id)  ON DELETE CASCADE,
-    exercise_id TEXT             NOT NULL REFERENCES exercises (id) ON DELETE RESTRICT,
-    set_order   INTEGER          NOT NULL CHECK (set_order >= 1),
-    reps        INTEGER          NOT NULL CHECK (reps BETWEEN 1 AND 200),
-    weight_kg   DOUBLE PRECISION          CHECK (weight_kg BETWEEN 0 AND 600)
+    program_id  TEXT          NOT NULL REFERENCES programs (id)  ON DELETE CASCADE,
+    exercise_id TEXT          NOT NULL REFERENCES exercises (id) ON DELETE RESTRICT,
+    set_order   INTEGER       NOT NULL CHECK (set_order >= 1),
+    reps        INTEGER       NOT NULL CHECK (reps BETWEEN 1 AND 200),
+    weight_kg   NUMERIC(5,2)           CHECK (weight_kg BETWEEN 0 AND 600),
+    UNIQUE (program_id, set_order)                                          -- ordre non ambigu
 );
 
 CREATE INDEX program_sets_program_id_idx ON program_sets (program_id);
@@ -283,18 +298,19 @@ DELETE FROM sessions WHERE expires_at < now();
 DELETE FROM users WHERE id = $1;
 ```
 
-## Brancher l'application Next.js sur PostgreSQL
+## Backend Spring Boot & migrations
 
-L'application utilise Prisma 7 : le passage à Postgres ne demande pas de
-réécrire les requêtes, seulement la datasource et l'adaptateur.
+Le schéma vit dans le backend Java (`C:\Users\xrang\IdeaProjects\sport`), pas
+dans le frontend :
 
-1. `npm install @prisma/adapter-pg`
-2. `prisma/schema.prisma` : `datasource db { provider = "postgresql" }`,
-   et mapper les noms si vous adoptez le snake_case de ce document
-   (`@@map("users")`, `order Int @map("set_order")`, etc.).
-3. `lib/db.ts` : remplacer `PrismaBetterSqlite3` par `PrismaPg`
-   (même forme : `new PrismaPg({ connectionString: process.env.DATABASE_URL })`).
-4. `.env` : `DATABASE_URL="postgresql://user:pass@host:5432/fitpilot"`
-   (en production : variable d'environnement du hébergeur, jamais commitée).
-5. `npx prisma migrate dev` régénérera des migrations Postgres — le script SQL
-   ci-dessus sert alors de référence/contrôle, pas de migration à exécuter à la main.
+- **Migrations Flyway** : `src/main/resources/db/migration/V*.sql`, appliquées
+  au démarrage. Historique : `V1` schéma, `V2` seed exercices, `V3` jour de
+  programme, `V4` vérification e-mail, `V5` durcissement (contraintes ci-dessus).
+- **Hibernate ne gère jamais le DDL** (`spring.jpa.hibernate.ddl-auto=none`) :
+  le script consolidé de ce document = **référence de lecture**, la vérité
+  exécutable = la suite des `V*.sql`.
+- **Connexion** : `DATABASE_URL` / `DATABASE_USER` / `DATABASE_PASSWORD`
+  (défaut dev : `jdbc:postgresql://localhost:5433/fitpilot`, Postgres du
+  `compose.yaml`). En production : variables d'environnement de l'hébergeur.
+- **Toute évolution du modèle** = une nouvelle migration `V{n}__*.sql` + le
+  miroir applicatif (entité JPA, validation, et mise à jour de ce document).

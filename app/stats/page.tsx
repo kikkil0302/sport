@@ -143,7 +143,7 @@ export default async function StatsPage() {
           {recentWeights.length >= 2 ? (
             <LineChart
               labels={recentWeights.map((entry) =>
-                DAY_MONTH.format(new Date(entry.measuredAt)),
+                DAY_MONTH.format(parseDateInput(entry.measuredAt)),
               )}
               series={weightSeries}
               unit="kg"
@@ -165,7 +165,7 @@ export default async function StatsPage() {
                     className="flex items-center justify-between gap-4 text-zinc-600 dark:text-zinc-400"
                   >
                     <span>
-                      {FULL_DATE.format(new Date(entry.measuredAt))} —{" "}
+                      {FULL_DATE.format(parseDateInput(entry.measuredAt))} —{" "}
                       <span className="font-medium text-zinc-900 dark:text-zinc-100">
                         {NUMBER_FR.format(entry.weightKg)} kg
                       </span>
@@ -173,8 +173,8 @@ export default async function StatsPage() {
                     <form action={deleteBodyWeightAction.bind(null, entry.id)}>
                       <ConfirmSubmitButton
                         className="text-xs text-red-500 hover:underline"
-                        confirmMessage={`Supprimer la pesée du ${FULL_DATE.format(new Date(entry.measuredAt))} ?`}
-                        aria-label={`Supprimer la pesée du ${FULL_DATE.format(new Date(entry.measuredAt))}`}
+                        confirmMessage={`Supprimer la pesée du ${FULL_DATE.format(parseDateInput(entry.measuredAt))} ?`}
+                        aria-label={`Supprimer la pesée du ${FULL_DATE.format(parseDateInput(entry.measuredAt))}`}
                       >
                         Supprimer
                       </ConfirmSubmitButton>

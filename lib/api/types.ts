@@ -84,6 +84,13 @@ export interface BodyWeightEntry {
   weightKg: number;
 }
 
+export type GoalPhase = "cut" | "maintain" | "bulk";
+
+export interface Goal {
+  targetWeightKg: number | null;
+  phase: GoalPhase | null;
+}
+
 export interface WeeklyVolumePoint {
   weekStart: string;
   volumeKg: number;

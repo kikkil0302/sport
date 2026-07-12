@@ -2,6 +2,7 @@ import { apiFetch } from "./client";
 import type {
   BodyWeightEntry,
   ExerciseOption,
+  Goal,
   LastPerformance,
   PersonalRecord,
   ProgramDetail,
@@ -163,6 +164,19 @@ export function addBodyWeight(input: {
 
 export function deleteBodyWeight(id: string): Promise<void> {
   return apiFetch(`/api/body-weights/${id}`, { method: "DELETE" });
+}
+
+// Goals
+
+export function getGoal(): Promise<Goal> {
+  return apiFetch("/api/goals");
+}
+
+export function updateGoal(input: {
+  targetWeightKg: number | null;
+  phase: Goal["phase"];
+}): Promise<Goal> {
+  return apiFetch("/api/goals", { method: "PUT", body: JSON.stringify(input) });
 }
 
 // Stats & account

@@ -5,11 +5,13 @@ import { ColumnChart } from "@/components/charts/column-chart";
 import { LineChart, type LineSeries } from "@/components/charts/line-chart";
 import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
 import { BodyWeightForm } from "@/components/stats/body-weight-form";
+import { GoalForm, PHASE_LABELS } from "@/components/stats/goal-form";
 import { StatTile } from "@/components/stats/stat-tile";
 import { MuscleBadge } from "@/components/muscle-icon";
-import { getStats, listBodyWeights, listRecords } from "@/lib/api";
+import { getGoal, getStats, listBodyWeights, listRecords } from "@/lib/api";
 import { requireUser } from "@/lib/auth";
 import { parseDateInput } from "@/lib/dates";
+import { weightGoalProgress } from "@/lib/stats/weight-goal";
 
 export const metadata: Metadata = {
   title: "Statistiques",
@@ -50,11 +52,22 @@ function ChartCard({
 export default async function StatsPage() {
   await requireUser();
 
-  const [stats, weights, records] = await Promise.all([
+  const [stats, weights, records, goal] = await Promise.all([
     getStats(),
     listBodyWeights(),
     listRecords(),
+    getGoal(),
   ]);
+
+  // Progression vers l'objectif : de la 1re pesée à la plus récente.
+  const goalProgress =
+    goal.targetWeightKg !== null && weights.length >= 1
+      ? weightGoalProgress(
+          weights[0].weightKg,
+          weights[weights.length - 1].weightKg,
+          goal.targetWeightKg,
+        )
+      : null;
 
   // Charts
   const volumeData = stats.weeklyVolume.map((point) => ({
@@ -125,6 +138,51 @@ export default async function StatsPage() {
       )}
 
       <div className="mt-8 space-y-6">
+        <section className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className="font-semibold">Objectif de poids</h2>
+            {goal.phase && (
+              <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
+                Phase : {PHASE_LABELS[goal.phase]}
+              </span>
+            )}
+          </div>
+
+          {goalProgress && goal.targetWeightKg !== null ? (
+            <div className="mt-4">
+              <div className="flex items-baseline justify-between gap-4 text-sm">
+                <span className="text-zinc-600 dark:text-zinc-400">
+                  Cible : {" "}
+                  <span className="font-semibold text-zinc-900 dark:text-zinc-100">
+                    {NUMBER_FR.format(goal.targetWeightKg)} kg
+                  </span>
+                </span>
+                <span className="font-medium">
+                  {goalProgress.reached
+                    ? "🎉 Objectif atteint !"
+                    : `Plus que ${NUMBER_FR.format(goalProgress.remainingKg)} kg`}
+                </span>
+              </div>
+              <div className="mt-2 h-2.5 w-full overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-800">
+                <div
+                  className="h-full rounded-full bg-emerald-500 transition-[width]"
+                  style={{ width: `${Math.round(goalProgress.fraction * 100)}%` }}
+                />
+              </div>
+            </div>
+          ) : (
+            <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
+              {goal.targetWeightKg !== null
+                ? "Enregistrez une pesée pour suivre votre progression vers la cible."
+                : "Fixez un poids cible et votre phase pour suivre votre progression."}
+            </p>
+          )}
+
+          <div className="mt-4 border-t border-zinc-200 pt-4 dark:border-zinc-800">
+            <GoalForm goal={goal} />
+          </div>
+        </section>
+
         <ChartCard
           title="Volume hebdomadaire"
           subtitle="Somme des répétitions × charges, 8 dernières semaines (semaines débutant le lundi)"

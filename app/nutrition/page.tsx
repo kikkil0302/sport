@@ -1,7 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { DietPlanner } from "@/components/nutrition/diet-planner";
-import { BULK_GUIDE, CUT_GUIDE, type GuideSection } from "@/lib/nutrition";
+import {
+  BULK_GUIDE,
+  CUT_GUIDE,
+  MAINTAIN_GUIDE,
+  type GuideSection,
+} from "@/lib/nutrition";
 
 const title = "Plan alimentaire personnalisé & guide sèche / prise de masse";
 const description =
@@ -44,19 +49,24 @@ export default function NutritionPage() {
 
       <section className="mt-16">
         <h2 className="text-2xl font-bold tracking-tight">
-          Guide : réussir sa sèche ou sa prise de masse
+          Guide : sèche, maintien ou prise de masse
         </h2>
         <p className="mt-2 max-w-2xl text-zinc-600 dark:text-zinc-400">
-          Les principes qui font l&apos;essentiel du résultat, dans un sens
-          comme dans l&apos;autre : le réglage des calories, les protéines,
-          l&apos;entraînement et le suivi.
+          Les principes qui font l&apos;essentiel du résultat, dans chaque
+          phase : le réglage des calories, les protéines, l&apos;entraînement
+          et le suivi.
         </p>
 
-        <div className="mt-8 grid gap-6 lg:grid-cols-2">
+        <div className="mt-8 grid gap-6 lg:grid-cols-3">
           <GuideCard
             title="Sécher (cut)"
             subtitle="Perdre du gras en gardant le muscle"
             sections={CUT_GUIDE}
+          />
+          <GuideCard
+            title="Maintenir"
+            subtitle="Stabiliser son poids entre deux phases"
+            sections={MAINTAIN_GUIDE}
           />
           <GuideCard
             title="Prendre de la masse (bulk)"

@@ -41,6 +41,39 @@ export const CUT_GUIDE: GuideSection[] = [
   },
 ];
 
+export const MAINTAIN_GUIDE: GuideSection[] = [
+  {
+    title: "Trouver sa maintenance",
+    intro:
+      "Le maintien, c'est manger autour de sa dépense (TDEE) pour stabiliser son poids — la base entre deux phases, et une phase à part entière.",
+    bullets: [
+      "Réglez les calories sur votre TDEE (réglage « Maintien » du calculateur) : ni surplus, ni déficit.",
+      "Votre vraie maintenance se lit sur la balance : si le poids moyen reste stable sur 2 à 3 semaines, vous y êtes.",
+      "Elle évolue avec le temps (poids, activité, masse musculaire) : réévaluez-la tous les 1 à 2 mois.",
+    ],
+  },
+  {
+    title: "À quoi sert le maintien",
+    intro:
+      "Loin d'être du surplace, le maintien a plusieurs usages précis.",
+    bullets: [
+      "Après une sèche : stabiliser plusieurs semaines limite l'effet yo-yo et laisse le métabolisme et l'appétit se rééquilibrer (diet break).",
+      "Après une prise de masse : consolider les gains avant de repartir sur une sèche ou un nouveau cycle.",
+      "Recomposition : à la maintenance, un débutant ou une reprise peut gagner du muscle et perdre du gras en même temps, lentement.",
+      "Durabilité : c'est la phase la plus facile à tenir dans le temps — utile pour souffler entre deux objectifs.",
+    ],
+  },
+  {
+    title: "Protéines, entraînement et suivi",
+    bullets: [
+      "Gardez les protéines hautes (1,6 à 2 g par kg) : elles soutiennent le muscle même sans surplus.",
+      "Continuez la surcharge progressive à l'entraînement : c'est elle qui rend la recomposition possible à calories stables.",
+      "Suivez la moyenne hebdomadaire de vos pesées : tant qu'elle reste dans une fourchette d'environ ± 1 kg, vous êtes à la maintenance.",
+      "Si le poids dérive nettement 2 à 3 semaines de suite, ajustez de 100 à 150 kcal dans le sens voulu.",
+    ],
+  },
+];
+
 export const BULK_GUIDE: GuideSection[] = [
   {
     title: "Fixer le surplus",

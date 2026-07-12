@@ -24,6 +24,7 @@ function beep() {
 /** Minuteur de repos entre les séries — 100 % client, aucun envoi serveur. */
 export function RestTimer() {
   const [secondsLeft, setSecondsLeft] = useState<number | null>(null);
+  const [total, setTotal] = useState(0);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
@@ -35,6 +36,7 @@ export function RestTimer() {
   function start(seconds: number) {
     if (intervalRef.current) clearInterval(intervalRef.current);
     setSecondsLeft(seconds);
+    setTotal(seconds);
     intervalRef.current = setInterval(() => {
       setSecondsLeft((current) => {
         if (current === null || current <= 1) {
@@ -50,6 +52,12 @@ export function RestTimer() {
   function stop() {
     if (intervalRef.current) clearInterval(intervalRef.current);
     setSecondsLeft(null);
+  }
+
+  /** Prolonge le repos en cours de 30 s sans le relancer. */
+  function extend() {
+    setSecondsLeft((current) => (current === null ? null : current + 30));
+    setTotal((current) => current + 30);
   }
 
   const display =
@@ -80,6 +88,16 @@ export function RestTimer() {
           aria-live="polite"
         >
           {secondsLeft === 0 ? "C'est reparti !" : display}
+          {secondsLeft !== null && secondsLeft > 0 && (
+            <button
+              type="button"
+              onClick={extend}
+              aria-label="Ajouter 30 secondes"
+              className="text-xs font-normal text-zinc-500 underline dark:text-zinc-400"
+            >
+              +30 s
+            </button>
+          )}
           <button
             type="button"
             onClick={stop}
@@ -89,6 +107,15 @@ export function RestTimer() {
             arrêter
           </button>
         </span>
+      )}
+
+      {display !== null && total > 0 && (
+        <div className="h-1.5 w-full overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-800">
+          <div
+            className="h-full rounded-full bg-emerald-500 transition-[width] duration-1000 ease-linear"
+            style={{ width: `${Math.max(0, ((secondsLeft ?? 0) / total) * 100)}%` }}
+          />
+        </div>
       )}
     </div>
   );

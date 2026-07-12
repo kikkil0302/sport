@@ -44,3 +44,16 @@ export const WEEKDAY_LABELS = [
 export function todayWeekdayIndex(now: Date = new Date()): number {
   return (now.getDay() + 6) % 7;
 }
+
+/**
+ * Whole calendar days between a past ISO instant and now, in local time
+ * (0 = same day, 1 = yesterday…). `now` injectable to keep `new Date()`
+ * out of component render (eslint react-hooks/purity).
+ */
+export function daysSince(iso: string, now: Date = new Date()): number {
+  const then = new Date(iso);
+  if (Number.isNaN(then.getTime())) return 0;
+  const startThen = new Date(then.getFullYear(), then.getMonth(), then.getDate());
+  const startNow = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  return Math.round((startNow.getTime() - startThen.getTime()) / 86_400_000);
+}

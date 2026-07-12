@@ -11,6 +11,7 @@ import {
 import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
 import { AddSetForm } from "@/components/workouts/add-set-form";
 import { NewExerciseForm } from "@/components/workouts/new-exercise-form";
+import { RepGuide } from "@/components/workouts/rep-guide";
 import { SetsTable } from "@/components/workouts/sets-table";
 import {
   ApiError,
@@ -114,6 +115,10 @@ export default async function ProgrammeDetailPage({
           Le programme apparaîtra sur la page Séances le jour choisi.
         </p>
       </form>
+
+      <div className="mt-8">
+        <RepGuide />
+      </div>
 
       <div className="mt-8 space-y-4">
         <AddSetForm

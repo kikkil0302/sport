@@ -4,7 +4,7 @@ import { startWorkoutFromProgramAction } from "@/app/actions/programs";
 import { NewWorkoutForm } from "@/components/workouts/new-workout-form";
 import { listPrograms, listWorkouts } from "@/lib/api";
 import { requireUser } from "@/lib/auth";
-import { todayWeekdayIndex, WEEKDAY_LABELS } from "@/lib/dates";
+import { daysSince, todayWeekdayIndex, WEEKDAY_LABELS } from "@/lib/dates";
 
 export const metadata: Metadata = {
   title: "Mes séances",
@@ -23,6 +23,18 @@ export default async function SeancesPage() {
     (program) => program.weekday === today && program.setCount > 0,
   );
 
+  // Rappel d'inactivité : nombre de jours depuis la séance la plus récente.
+  const daysSinceLast =
+    workouts.length > 0
+      ? Math.min(...workouts.map((workout) => daysSince(workout.performedAt)))
+      : null;
+  const inactivityNudge =
+    daysSinceLast !== null && daysSinceLast >= 3
+      ? daysSinceLast >= 7
+        ? `🔥 ${daysSinceLast} jours sans séance. Une petite séance aujourd'hui pour relancer la machine ?`
+        : `💪 ${daysSinceLast} jours depuis ta dernière séance — prêt à t'y remettre ?`
+      : null;
+
   return (
     <div className="mx-auto max-w-3xl px-4 py-12">
       <h1 className="text-3xl font-bold tracking-tight">Mes séances</h1>
@@ -37,6 +49,12 @@ export default async function SeancesPage() {
         </Link>
         .
       </p>
+
+      {inactivityNudge && (
+        <p className="mt-8 rounded-xl border border-amber-300 bg-amber-50 px-5 py-4 text-sm font-medium text-amber-900 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-100">
+          {inactivityNudge}
+        </p>
+      )}
 
       {plannedToday.length > 0 && (
         <section className="mt-8 rounded-xl border border-emerald-300 bg-emerald-50 p-5 dark:border-emerald-800 dark:bg-emerald-950">

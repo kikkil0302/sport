@@ -8,6 +8,7 @@ import type {
   ProgramDetail,
   ProgramSummary,
   SetResponse,
+  SharedProgram,
   StatsResponse,
   WorkoutDetail,
   WorkoutSummary,
@@ -147,6 +148,23 @@ export function deleteProgramSet(programId: string, setId: string): Promise<void
 /** Copies the program's template sets into a workout dated now. */
 export function startProgramWorkout(programId: string): Promise<{ workoutId: string }> {
   return apiFetch(`/api/programs/${programId}/start`, { method: "POST" });
+}
+
+/** Generates (or returns) the program's public share token. */
+export function shareProgram(programId: string): Promise<{ token: string }> {
+  return apiFetch(`/api/programs/${programId}/share`, { method: "POST" });
+}
+
+/** Public preview of a shared program (no auth required). */
+export function getSharedProgram(token: string): Promise<SharedProgram> {
+  return apiFetch(`/api/shared/${encodeURIComponent(token)}`);
+}
+
+/** Imports a shared program into the current user's account. */
+export function importSharedProgram(token: string): Promise<{ programId: string }> {
+  return apiFetch(`/api/shared/${encodeURIComponent(token)}/import`, {
+    method: "POST",
+  });
 }
 
 // Body weight

@@ -9,7 +9,9 @@ import {
   createProgram,
   deleteProgram,
   deleteProgramSet,
+  importSharedProgram,
   listExercises,
+  shareProgram,
   startProgramWorkout,
   updateProgramWeekday,
 } from "@/lib/api";
@@ -211,4 +213,35 @@ export async function startWorkoutFromProgramAction(
   }
   revalidatePath("/seances");
   redirect(`/seances/${workoutId}`);
+}
+
+export interface ShareState {
+  token?: string;
+  error?: string;
+}
+
+/** Génère le lien de partage public du programme (à afficher au propriétaire). */
+export async function shareProgramAction(programId: string): Promise<ShareState> {
+  await requireUser();
+  try {
+    const { token } = await shareProgram(programId);
+    return { token };
+  } catch (error) {
+    if (error instanceof ApiError) return { error: error.message };
+    throw error;
+  }
+}
+
+/** Importe un programme partagé (par jeton) dans le compte de l'utilisateur. */
+export async function importSharedProgramAction(token: string): Promise<void> {
+  await requireUser();
+  let programId: string;
+  try {
+    ({ programId } = await importSharedProgram(token));
+  } catch (error) {
+    if (error instanceof ApiError) redirect("/programmes");
+    throw error;
+  }
+  revalidatePath("/programmes");
+  redirect(`/programmes/${programId}`);
 }

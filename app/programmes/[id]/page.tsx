@@ -9,6 +9,7 @@ import {
   startWorkoutFromProgramAction,
 } from "@/app/actions/programs";
 import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
+import { ShareButton } from "@/components/programs/share-button";
 import { AddSetForm } from "@/components/workouts/add-set-form";
 import { NewExerciseForm } from "@/components/workouts/new-exercise-form";
 import { RepGuide } from "@/components/workouts/rep-guide";
@@ -140,6 +141,17 @@ export default async function ProgrammeDetailPage({
           deleteAction={deleteProgramSetAction.bind(null, program.id)}
           emptyMessage="Aucune série — composez le programme ci-dessus."
         />
+      </div>
+
+      <div className="mt-10 border-t border-zinc-200 pt-6 dark:border-zinc-800">
+        <h2 className="font-semibold">Partager</h2>
+        <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+          Envoyez ce programme à un ami : il pourra l&apos;importer dans son
+          compte, sans voir vos données personnelles.
+        </p>
+        <div className="mt-3">
+          <ShareButton programId={program.id} />
+        </div>
       </div>
 
       <form

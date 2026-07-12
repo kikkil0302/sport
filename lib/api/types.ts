@@ -84,6 +84,19 @@ export interface BodyWeightEntry {
   weightKg: number;
 }
 
+export interface SharedProgramSet {
+  exerciseName: string;
+  muscleGroup: string;
+  reps: number;
+  weightKg: number | null;
+}
+
+export interface SharedProgram {
+  name: string;
+  description: string | null;
+  sets: SharedProgramSet[];
+}
+
 export type GoalPhase = "cut" | "maintain" | "bulk";
 
 export interface Goal {

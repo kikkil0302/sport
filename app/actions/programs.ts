@@ -13,6 +13,8 @@ import {
   listExercises,
   shareProgram,
   startProgramWorkout,
+  updateProgramDefaultRest,
+  updateProgramSetRest,
   updateProgramWeekday,
 } from "@/lib/api";
 import { requireUser } from "@/lib/auth";
@@ -95,6 +97,7 @@ export async function addProgramSetAction(
       exerciseId: parsed.data.exerciseId,
       reps: parsed.data.reps,
       weightKg: parsed.data.weightKg ?? null,
+      restSeconds: parseRestSeconds(formValue(formData, "restSeconds")),
     });
   } catch (error) {
     if (error instanceof ApiError) return { error: error.message };
@@ -102,6 +105,51 @@ export async function addProgramSetAction(
   }
   revalidatePath(`/programmes/${programId}`);
   return {};
+}
+
+/** Repos saisi (secondes) → entier 0–3600, ou null si vide/invalide. */
+function parseRestSeconds(raw: string): number | null {
+  const trimmed = raw.trim();
+  if (trimmed === "") return null;
+  const value = Number(trimmed);
+  if (!Number.isFinite(value) || value < 0) return null;
+  return Math.min(Math.round(value), 3600);
+}
+
+/** Règle le temps de repos par défaut du programme. */
+export async function updateProgramDefaultRestAction(
+  programId: string,
+  formData: FormData,
+): Promise<void> {
+  await requireUser();
+  try {
+    await updateProgramDefaultRest(
+      programId,
+      parseRestSeconds(formValue(formData, "restSeconds")),
+    );
+  } catch (error) {
+    if (!(error instanceof ApiError)) throw error;
+  }
+  revalidatePath(`/programmes/${programId}`);
+}
+
+/** Édite en ligne le temps de repos d'une série de programme. */
+export async function updateProgramSetRestAction(
+  programId: string,
+  setId: string,
+  formData: FormData,
+): Promise<void> {
+  await requireUser();
+  try {
+    await updateProgramSetRest(
+      programId,
+      setId,
+      parseRestSeconds(formValue(formData, "restSeconds")),
+    );
+  } catch (error) {
+    if (!(error instanceof ApiError)) throw error;
+  }
+  revalidatePath(`/programmes/${programId}`);
 }
 
 export async function deleteProgramSetAction(

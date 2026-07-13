@@ -15,6 +15,8 @@ export function AddSetForm({
   action,
   exercises,
   lastPerformances = {},
+  showRest = false,
+  restDefault = null,
 }: {
   /** Bound server action with (previousState, formData) signature. */
   action: (
@@ -24,6 +26,10 @@ export function AddSetForm({
   exercises: ExerciseOption[];
   /** Résumé « la dernière fois » par exerciseId (déjà formaté). */
   lastPerformances?: Record<string, string>;
+  /** Affiche le champ « Repos (s) » (programmes uniquement). */
+  showRest?: boolean;
+  /** Repos par défaut du programme, montré en placeholder. */
+  restDefault?: number | null;
 }) {
   const [state, formAction, pending] = useActionState(action, INITIAL_STATE);
   const [exerciseId, setExerciseId] = useState(exercises[0]?.id ?? "");
@@ -85,6 +91,19 @@ export function AddSetForm({
             className="h-11 w-full rounded-lg border border-zinc-300 bg-white px-3 text-sm outline-none focus:border-emerald-500 dark:border-zinc-700 dark:bg-zinc-900"
           />
         </label>
+        {showRest && (
+          <label className="block w-24">
+            <span className="mb-1 block text-sm font-medium">Repos (s)</span>
+            <input
+              type="number"
+              name="restSeconds"
+              min={0}
+              max={3600}
+              placeholder={restDefault != null ? String(restDefault) : "90"}
+              className="h-11 w-full rounded-lg border border-zinc-300 bg-white px-3 text-sm outline-none focus:border-emerald-500 dark:border-zinc-700 dark:bg-zinc-900"
+            />
+          </label>
+        )}
         <button
           type="submit"
           disabled={pending}

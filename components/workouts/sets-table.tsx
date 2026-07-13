@@ -1,8 +1,11 @@
+import { RestCell } from "./rest-cell";
+
 export interface SetRow {
   id: string;
   exerciseName: string;
   reps: number;
   weightKg: number | null;
+  restSeconds?: number | null;
 }
 
 /** Shared sets table for workout and program detail pages. */
@@ -10,11 +13,20 @@ export function SetsTable({
   sets,
   deleteAction,
   emptyMessage,
+  updateRestAction,
+  defaultRest = null,
 }: {
   sets: SetRow[];
   deleteAction: (setId: string) => Promise<void>;
   emptyMessage: string;
+  /** Fourni côté programme → affiche une colonne « Repos » éditable. */
+  updateRestAction?: (setId: string, formData: FormData) => Promise<void>;
+  /** Repos par défaut du programme (placeholder des cellules). */
+  defaultRest?: number | null;
 }) {
+  const showRest = updateRestAction !== undefined;
+  const columnCount = showRest ? 6 : 5;
+
   return (
     <div className="overflow-x-auto rounded-xl border border-zinc-200 dark:border-zinc-800">
       <table className="w-full text-sm">
@@ -24,6 +36,7 @@ export function SetsTable({
             <th className="px-4 py-2">Exercice</th>
             <th className="px-4 py-2">Réps</th>
             <th className="px-4 py-2">Charge</th>
+            {showRest && <th className="px-4 py-2">Repos</th>}
             <th className="px-4 py-2" />
           </tr>
         </thead>
@@ -31,7 +44,7 @@ export function SetsTable({
           {sets.length === 0 ? (
             <tr>
               <td
-                colSpan={5}
+                colSpan={columnCount}
                 className="px-4 py-8 text-center text-zinc-500 dark:text-zinc-400"
               >
                 {emptyMessage}
@@ -51,6 +64,15 @@ export function SetsTable({
                 <td className="px-4 py-2">
                   {set.weightKg !== null ? `${set.weightKg} kg` : "Poids du corps"}
                 </td>
+                {showRest && (
+                  <td className="px-4 py-2">
+                    <RestCell
+                      action={updateRestAction.bind(null, set.id)}
+                      restSeconds={set.restSeconds ?? null}
+                      defaultRest={defaultRest}
+                    />
+                  </td>
+                )}
                 <td className="px-4 py-2 text-right">
                   <form action={deleteAction.bind(null, set.id)}>
                     <button

@@ -22,6 +22,8 @@ export interface SetResponse {
   order: number;
   reps: number;
   weightKg: number | null;
+  /** Temps de repos (s) ; renseigné pour les séries de programme, sinon null. */
+  restSeconds: number | null;
   /** Vrai quand la série vient de battre le meilleur 1RM estimé de l'exercice. */
   record: boolean;
 }
@@ -75,6 +77,8 @@ export interface ProgramDetail {
   description: string | null;
   createdAt: string;
   weekday: number | null;
+  /** Repos par défaut (s) du programme, appliqué aux séries sans valeur propre. */
+  defaultRestSeconds: number | null;
   sets: SetResponse[];
 }
 

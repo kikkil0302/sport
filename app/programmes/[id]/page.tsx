@@ -7,12 +7,15 @@ import {
   deleteProgramSetAction,
   planProgramAction,
   startWorkoutFromProgramAction,
+  updateProgramDefaultRestAction,
+  updateProgramSetRestAction,
 } from "@/app/actions/programs";
 import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
 import { ShareButton } from "@/components/programs/share-button";
 import { AddSetForm } from "@/components/workouts/add-set-form";
 import { NewExerciseForm } from "@/components/workouts/new-exercise-form";
 import { RepGuide } from "@/components/workouts/rep-guide";
+import { RestCell } from "@/components/workouts/rest-cell";
 import { SetsTable } from "@/components/workouts/sets-table";
 import {
   ApiError,
@@ -117,6 +120,18 @@ export default async function ProgrammeDetailPage({
         </p>
       </form>
 
+      <div className="mt-4 flex flex-wrap items-center gap-3 rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
+        <span className="text-sm font-medium">Repos par défaut</span>
+        <RestCell
+          action={updateProgramDefaultRestAction.bind(null, program.id)}
+          restSeconds={program.defaultRestSeconds}
+        />
+        <p className="w-full text-xs text-zinc-500 sm:w-auto sm:flex-1 dark:text-zinc-400">
+          Appliqué à chaque exercice sans repos propre ; modifie une ligne du
+          tableau pour la personnaliser.
+        </p>
+      </div>
+
       <div className="mt-8">
         <RepGuide />
       </div>
@@ -126,6 +141,8 @@ export default async function ProgrammeDetailPage({
           action={addProgramSetAction.bind(null, program.id)}
           exercises={exercises}
           lastPerformances={lastSummaries}
+          showRest
+          restDefault={program.defaultRestSeconds}
         />
         <NewExerciseForm revalidate={`/programmes/${program.id}`} />
       </div>
@@ -137,8 +154,11 @@ export default async function ProgrammeDetailPage({
             exerciseName: set.exerciseName,
             reps: set.reps,
             weightKg: set.weightKg,
+            restSeconds: set.restSeconds,
           }))}
           deleteAction={deleteProgramSetAction.bind(null, program.id)}
+          updateRestAction={updateProgramSetRestAction.bind(null, program.id)}
+          defaultRest={program.defaultRestSeconds}
           emptyMessage="Aucune série — composez le programme ci-dessus."
         />
       </div>

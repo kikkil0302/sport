@@ -69,6 +69,8 @@ export interface AddSetInput {
   exerciseId: string;
   reps: number;
   weightKg: number | null;
+  /** Repos (s), optionnel — utilisé par les séries de programme. */
+  restSeconds?: number | null;
 }
 
 export function addWorkoutSet(
@@ -123,6 +125,17 @@ export function deleteProgram(id: string): Promise<void> {
   return apiFetch(`/api/programs/${id}`, { method: "DELETE" });
 }
 
+/** Règle le repos par défaut (s) du programme (null = aucun). */
+export function updateProgramDefaultRest(
+  id: string,
+  defaultRestSeconds: number | null,
+): Promise<ProgramDetail> {
+  return apiFetch(`/api/programs/${id}/default-rest`, {
+    method: "PATCH",
+    body: JSON.stringify({ defaultRestSeconds }),
+  });
+}
+
 /** Planifie le programme sur un jour (0 = lundi … 6 = dimanche, null = aucun). */
 export function updateProgramWeekday(
   id: string,
@@ -143,6 +156,18 @@ export function addProgramSet(programId: string, input: AddSetInput): Promise<vo
 
 export function deleteProgramSet(programId: string, setId: string): Promise<void> {
   return apiFetch(`/api/programs/${programId}/sets/${setId}`, { method: "DELETE" });
+}
+
+/** Met à jour le temps de repos (s) d'une série de programme (null = aucun). */
+export function updateProgramSetRest(
+  programId: string,
+  setId: string,
+  restSeconds: number | null,
+): Promise<SetResponse> {
+  return apiFetch(`/api/programs/${programId}/sets/${setId}`, {
+    method: "PATCH",
+    body: JSON.stringify({ restSeconds }),
+  });
 }
 
 /** Copies the program's template sets into a workout dated now. */

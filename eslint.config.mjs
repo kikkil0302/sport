@@ -14,6 +14,8 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     // Generated Prisma client.
     "lib/generated/**",
+    // Assets statiques (décodeur Draco, etc.) — pas notre code.
+    "public/**",
   ]),
 ]);
 

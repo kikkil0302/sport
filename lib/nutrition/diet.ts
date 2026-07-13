@@ -1,14 +1,16 @@
+import { WEEKDAY_LABELS } from "../dates";
 import { KCAL_PER_GRAM } from "./macros";
 import type { MacroTargets } from "./types";
 
-// Régime alimentaire d'exemple : génère une journée type qui vise les macros
-// calculées, en respectant les restrictions choisies. 100 % côté client.
+// Régime alimentaire d'exemple : génère les repas de la semaine visant les
+// macros calculées, en respectant les restrictions choisies. 100 % côté client.
 
 export const DIET_RESTRICTIONS = [
   "vegetarian",
   "vegan",
   "glutenFree",
   "lactoseFree",
+  "halal",
 ] as const;
 export type DietRestriction = (typeof DIET_RESTRICTIONS)[number];
 
@@ -17,6 +19,7 @@ export const RESTRICTION_LABELS: Record<DietRestriction, string> = {
   vegan: "Végétalien (vegan)",
   glutenFree: "Sans gluten",
   lactoseFree: "Sans lactose",
+  halal: "Halal",
 };
 
 export type FoodCategory = "protein" | "carb" | "fat" | "vegetable" | "fruit";
@@ -35,6 +38,7 @@ const ALL = {
   vegan: true,
   glutenFree: true,
   lactoseFree: true,
+  halal: true,
 } as const;
 
 function food(
@@ -58,6 +62,7 @@ export const FOODS: Food[] = [
   // Sources de protéines
   food("Blanc de poulet", "🍗", "protein", [165, 31, 0, 3.6], { vegetarian: false, vegan: false }),
   food("Steak haché 5 %", "🥩", "protein", [129, 21, 0, 5], { vegetarian: false, vegan: false }),
+  food("Jambon blanc", "🥓", "protein", [107, 18, 1, 3.5], { vegetarian: false, vegan: false, halal: false }),
   food("Saumon", "🐟", "protein", [208, 20, 0, 13], { vegetarian: false, vegan: false }),
   food("Thon au naturel", "🐟", "protein", [116, 26, 0, 1], { vegetarian: false, vegan: false }),
   food("Œufs", "🥚", "protein", [143, 12.5, 1, 10], { vegan: false }),
@@ -322,6 +327,81 @@ export function buildDietPlan(
       fatG: macros.fatG,
     },
   };
+}
+
+export const CATEGORY_LABELS: Record<FoodCategory, string> = {
+  protein: "Protéines",
+  carb: "Féculents & céréales",
+  fat: "Matières grasses",
+  vegetable: "Légumes",
+  fruit: "Fruits",
+};
+
+/** Ordre d'affichage des catégories (repas + liste de courses). */
+const CATEGORY_ORDER: FoodCategory[] = [
+  "protein",
+  "carb",
+  "fat",
+  "vegetable",
+  "fruit",
+];
+
+export interface DayPlan {
+  /** 0 = lundi … 6 = dimanche. */
+  weekday: number;
+  label: string;
+  plan: DietPlan;
+}
+
+export type WeeklyPlan = DayPlan[];
+
+/**
+ * Génère les 7 jours de la semaine. Chaque jour utilise un `variant` différent
+ * (décalé de son index) pour varier les aliments d'un jour à l'autre ; `offset`
+ * permet de re-tirer toute la semaine (« autre proposition »).
+ */
+export function buildWeeklyPlan(
+  calories: number,
+  macros: MacroTargets,
+  restrictions: DietRestriction[],
+  offset = 0,
+): WeeklyPlan {
+  return WEEKDAY_LABELS.map((label, weekday) => ({
+    weekday,
+    label,
+    plan: buildDietPlan(calories, macros, restrictions, offset + weekday),
+  }));
+}
+
+export interface ShoppingItem {
+  food: Food;
+  /** Quantité totale sur la semaine, en grammes. */
+  grams: number;
+}
+
+/** Agrège tous les aliments de la semaine en une liste de courses (par catégorie). */
+export function buildShoppingList(week: WeeklyPlan): ShoppingItem[] {
+  const totals = new Map<string, ShoppingItem>();
+  for (const day of week) {
+    for (const meal of day.plan.meals) {
+      for (const item of meal.items) {
+        const current = totals.get(item.food.name);
+        if (current) current.grams += item.grams;
+        else totals.set(item.food.name, { food: item.food, grams: item.grams });
+      }
+    }
+  }
+  return [...totals.values()].sort(
+    (a, b) =>
+      CATEGORY_ORDER.indexOf(a.food.category) -
+        CATEGORY_ORDER.indexOf(b.food.category) ||
+      a.food.name.localeCompare(b.food.name, "fr"),
+  );
+}
+
+/** Formate une quantité en g ou kg pour la liste de courses. */
+export function formatQuantity(grams: number): string {
+  return grams >= 1000 ? `${(grams / 1000).toFixed(1).replace(".", ",")} kg` : `${grams} g`;
 }
 
 /** kcal théoriques des cibles macros (sert de garde-fou dans les tests). */

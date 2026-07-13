@@ -4,10 +4,13 @@ import { useState, useSyncExternalStore } from "react";
 import {
   ACTIVITY_LABELS,
   ACTIVITY_LEVELS,
-  buildDietPlan,
+  buildShoppingList,
+  buildWeeklyPlan,
+  CATEGORY_LABELS,
   clearStoredProfile,
   computeNutritionPlan,
   DIET_RESTRICTIONS,
+  formatQuantity,
   getServerStoredProfile,
   getStoredProfile,
   GOAL_LABELS,
@@ -16,9 +19,12 @@ import {
   RESTRICTION_LABELS,
   saveStoredProfile,
   subscribeStoredProfile,
-  type DietPlan,
+  type DayPlan,
   type DietRestriction,
+  type FoodCategory,
   type NutritionPlan,
+  type ShoppingItem,
+  type WeeklyPlan,
 } from "@/lib/nutrition";
 import { formValue } from "@/lib/forms";
 
@@ -44,6 +50,7 @@ export function DietPlanner() {
 
   const [errors, setErrors] = useState<FieldErrors>({});
   const [variant, setVariant] = useState(0);
+  const [day, setDay] = useState(0);
   const [result, setResult] = useState<{
     plan: NutritionPlan;
     restrictions: DietRestriction[];
@@ -93,6 +100,7 @@ export function DietPlanner() {
     const plan = computeNutritionPlan(profile, activityLevel, goal);
     setErrors({});
     setVariant(0);
+    setDay(0);
     setResult({ plan, restrictions });
 
     saveStoredProfile({
@@ -107,14 +115,15 @@ export function DietPlanner() {
     });
   }
 
-  const diet = result
-    ? buildDietPlan(
+  const week = result
+    ? buildWeeklyPlan(
         result.plan.targetCalories,
         result.plan.macros,
         result.restrictions,
         variant,
       )
     : null;
+  const shopping = week ? buildShoppingList(week) : null;
 
   return (
     <div className="space-y-8">
@@ -198,7 +207,7 @@ export function DietPlanner() {
             type="submit"
             className="h-11 rounded-md bg-zinc-900 px-5 text-sm font-medium text-white transition-colors hover:bg-zinc-700 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200"
           >
-            Générer ma journée type
+            Générer ma semaine
           </button>
           <p className="text-xs text-zinc-500 dark:text-zinc-400">
             Profil mémorisé dans votre navigateur uniquement — rien n&apos;est
@@ -219,10 +228,13 @@ export function DietPlanner() {
         </div>
       </form>
 
-      {result && diet && (
+      {result && week && shopping && (
         <DietResults
           plan={result.plan}
-          diet={diet}
+          week={week}
+          shopping={shopping}
+          day={day}
+          onSelectDay={setDay}
           onOtherProposal={() => setVariant((current) => current + 1)}
         />
       )}
@@ -232,11 +244,17 @@ export function DietPlanner() {
 
 function DietResults({
   plan,
-  diet,
+  week,
+  shopping,
+  day,
+  onSelectDay,
   onOtherProposal,
 }: {
   plan: NutritionPlan;
-  diet: DietPlan;
+  week: WeeklyPlan;
+  shopping: ShoppingItem[];
+  day: number;
+  onSelectDay: (day: number) => void;
   onOtherProposal: () => void;
 }) {
   const delta = plan.targetCalories - plan.tdee;
@@ -247,17 +265,19 @@ function DietResults({
         ? `Surplus d'environ ${delta} kcal/jour au-dessus de votre dépense`
         : "Apport à votre niveau de dépense (maintien)";
 
+  const current = week[day];
+
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         <StatCard
-          label="Calories cibles"
+          label="Calories / jour"
           value={`${plan.targetCalories} kcal`}
           highlight
         />
-        <StatCard label="Protéines" value={`${plan.macros.proteinG} g`} />
-        <StatCard label="Glucides" value={`${plan.macros.carbsG} g`} />
-        <StatCard label="Lipides" value={`${plan.macros.fatG} g`} />
+        <StatCard label="Protéines / jour" value={`${plan.macros.proteinG} g`} />
+        <StatCard label="Glucides / jour" value={`${plan.macros.carbsG} g`} />
+        <StatCard label="Lipides / jour" value={`${plan.macros.fatG} g`} />
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -267,68 +287,142 @@ function DietResults({
           onClick={onOtherProposal}
           className="h-11 rounded-lg border border-zinc-300 px-4 text-sm font-medium transition-colors hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800"
         >
-          🔄 Autre proposition
+          🔄 Autre semaine
         </button>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2">
-        {diet.meals.map((meal) => (
-          <section
-            key={meal.name}
-            className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900"
-          >
-            <div className="flex items-baseline justify-between gap-3">
-              <h3 className="font-semibold">
-                <span className="mr-1.5" aria-hidden>
-                  {meal.emoji}
-                </span>
-                {meal.name}
-              </h3>
-              <span className="text-xs text-zinc-500 dark:text-zinc-400">
-                {meal.totals.kcal} kcal
-              </span>
-            </div>
-            <ul className="mt-3 space-y-2 text-sm">
-              {meal.items.map((item) => (
-                <li
-                  key={item.food.name}
-                  className="flex items-baseline justify-between gap-3"
-                >
-                  <span>
-                    <span className="mr-1.5" aria-hidden>
-                      {item.food.emoji}
-                    </span>
-                    {item.food.name}{" "}
-                    <span className="text-zinc-500 dark:text-zinc-400">
-                      {item.grams} g
-                    </span>
-                  </span>
-                  <span className="shrink-0 text-xs text-zinc-500 dark:text-zinc-400">
-                    P {item.proteinG} · G {item.carbsG} · L {item.fatG}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </section>
-        ))}
+      {/* Onglets des jours */}
+      <div className="flex flex-wrap gap-1.5">
+        {week.map((d) => {
+          const on = d.weekday === day;
+          return (
+            <button
+              key={d.weekday}
+              type="button"
+              onClick={() => onSelectDay(d.weekday)}
+              aria-pressed={on}
+              className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
+                on
+                  ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900"
+                  : "border border-zinc-300 text-zinc-600 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-900"
+              }`}
+            >
+              <span className="sm:hidden">{d.label.slice(0, 3)}</span>
+              <span className="hidden sm:inline">{d.label}</span>
+            </button>
+          );
+        })}
       </div>
 
-      <div className="rounded-xl border border-zinc-200 bg-white p-4 text-sm dark:border-zinc-800 dark:bg-zinc-900">
-        <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <span className="font-semibold">Total de la journée</span>
-          <span className="text-zinc-600 dark:text-zinc-400">
-            {diet.totals.kcal} kcal · P {diet.totals.proteinG} g · G{" "}
-            {diet.totals.carbsG} g · L {diet.totals.fatG} g
+      {/* Repas du jour sélectionné */}
+      <div>
+        <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
+          <h3 className="text-lg font-semibold">{current.label}</h3>
+          <span className="text-sm text-zinc-600 dark:text-zinc-400">
+            {current.plan.totals.kcal} kcal · P {current.plan.totals.proteinG} g ·
+            G {current.plan.totals.carbsG} g · L {current.plan.totals.fatG} g
           </span>
         </div>
-        <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
-          Journée d&apos;exemple générée à partir d&apos;aliments courants —
-          échangez librement un aliment contre un équivalent de la même
-          famille et ajustez les quantités à ±10 %. Estimations indicatives,
-          ne remplace pas un avis médical ou diététique.
-        </p>
+        <div className="grid gap-4 md:grid-cols-2">
+          {current.plan.meals.map((meal) => (
+            <MealCard key={meal.name} meal={meal} />
+          ))}
+        </div>
       </div>
+
+      <ShoppingList items={shopping} />
+
+      <p className="text-xs text-zinc-500 dark:text-zinc-400">
+        Semaine d&apos;exemple générée à partir d&apos;aliments courants —
+        échangez librement un aliment contre un équivalent de la même famille et
+        ajustez les quantités à ±10 %. Estimations indicatives, ne remplace pas
+        un avis médical ou diététique.
+      </p>
     </div>
+  );
+}
+
+function MealCard({ meal }: { meal: DayPlan["plan"]["meals"][number] }) {
+  return (
+    <section className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
+      <div className="flex items-baseline justify-between gap-3">
+        <h4 className="font-semibold">
+          <span className="mr-1.5" aria-hidden>
+            {meal.emoji}
+          </span>
+          {meal.name}
+        </h4>
+        <span className="text-xs text-zinc-500 dark:text-zinc-400">
+          {meal.totals.kcal} kcal
+        </span>
+      </div>
+      <ul className="mt-3 space-y-2 text-sm">
+        {meal.items.map((item) => (
+          <li
+            key={item.food.name}
+            className="flex items-baseline justify-between gap-3"
+          >
+            <span>
+              <span className="mr-1.5" aria-hidden>
+                {item.food.emoji}
+              </span>
+              {item.food.name}{" "}
+              <span className="text-zinc-500 dark:text-zinc-400">
+                {item.grams} g
+              </span>
+            </span>
+            <span className="shrink-0 text-xs text-zinc-500 dark:text-zinc-400">
+              P {item.proteinG} · G {item.carbsG} · L {item.fatG}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+function ShoppingList({ items }: { items: ShoppingItem[] }) {
+  const categories = Object.keys(CATEGORY_LABELS) as FoodCategory[];
+  return (
+    <section className="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
+      <h3 className="flex items-baseline gap-2 font-semibold">
+        <span aria-hidden>🛒</span> Liste de courses
+        <span className="text-xs font-normal text-zinc-500 dark:text-zinc-400">
+          semaine complète
+        </span>
+      </h3>
+      <div className="mt-4 grid gap-x-8 gap-y-5 sm:grid-cols-2">
+        {categories.map((category) => {
+          const catItems = items.filter((item) => item.food.category === category);
+          if (catItems.length === 0) return null;
+          return (
+            <div key={category}>
+              <p className="mb-2 text-xs font-medium tracking-wide text-zinc-400 uppercase">
+                {CATEGORY_LABELS[category]}
+              </p>
+              <ul className="space-y-1.5 text-sm">
+                {catItems.map((item) => (
+                  <li
+                    key={item.food.name}
+                    className="flex items-baseline justify-between gap-3"
+                  >
+                    <span>
+                      <span className="mr-1.5" aria-hidden>
+                        {item.food.emoji}
+                      </span>
+                      {item.food.name}
+                    </span>
+                    <span className="shrink-0 font-medium text-zinc-600 dark:text-zinc-300">
+                      {formatQuantity(item.grams)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          );
+        })}
+      </div>
+    </section>
   );
 }
 

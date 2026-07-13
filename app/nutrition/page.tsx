@@ -39,8 +39,8 @@ export default function NutritionPage() {
         >
           calculateurs
         </Link>
-        ) puis compose une journée type — quantités en grammes, repas par
-        repas.
+        ) puis compose vos repas de la semaine — quantités en grammes, repas par
+        repas, avec la liste de courses.
       </p>
 
       <div className="mt-10">

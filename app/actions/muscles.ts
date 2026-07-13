@@ -3,27 +3,29 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import {
-  addWorkoutSet,
+  addProgramSet,
   ApiError,
   createExercise,
-  createWorkout,
+  createProgram,
   listExercises,
 } from "@/lib/api";
 import { requireUser } from "@/lib/auth";
-import { localDayKey } from "@/lib/dates";
 
-/** Réps par défaut de la série créée (l'utilisateur ajuste ensuite). */
+/** Réps cible par défaut de la série ajoutée au programme (ajustable ensuite). */
 const DEFAULT_REPS = 10;
 
 /**
- * Depuis la carte des muscles : crée une nouvelle séance (datée aujourd'hui)
- * contenant cet exercice, puis l'ouvre. L'exercice est résolu dans le catalogue
- * de l'utilisateur, ou créé s'il n'existe pas encore (rangé dans `backendGroup`,
- * l'un des 7 groupes du backend).
+ * Depuis la carte des muscles : ajoute cet exercice à un programme, puis
+ * l'ouvre. `programId` vide = crée un nouveau programme nommé `newProgramName` ;
+ * sinon on ajoute au programme existant. L'exercice est résolu dans le
+ * catalogue de l'utilisateur, ou créé s'il n'existe pas encore (rangé dans
+ * `backendGroup`, l'un des 7 groupes du backend).
  */
-export async function addExerciseToNewWorkoutAction(
+export async function addExerciseToProgramAction(
   exerciseName: string,
   backendGroup: string,
+  programId: string,
+  newProgramName: string,
 ): Promise<void> {
   await requireUser();
 
@@ -45,14 +47,18 @@ export async function addExerciseToNewWorkoutAction(
     }
   }
 
-  // 2) Crée la séance + une série par défaut.
-  const workout = await createWorkout({ performedAt: localDayKey(new Date()) });
-  await addWorkoutSet(workout.id, {
+  // 2) Programme cible : existant, ou nouveau (nommé d'après le muscle).
+  const targetId = programId
+    ? programId
+    : (await createProgram({ name: newProgramName || "Nouveau programme" })).id;
+
+  await addProgramSet(targetId, {
     exerciseId,
     reps: DEFAULT_REPS,
     weightKg: null,
   });
 
-  revalidatePath("/seances");
-  redirect(`/seances/${workout.id}`);
+  revalidatePath("/programmes");
+  revalidatePath(`/programmes/${targetId}`);
+  redirect(`/programmes/${targetId}`);
 }

@@ -1,6 +1,13 @@
 import type { Metadata } from "next";
 import { MuscleExplorer } from "@/components/muscles/muscle-explorer";
 import { getSessionUser } from "@/lib/auth";
+import { listPrograms } from "@/lib/api";
+import type { ProgramSummary } from "@/lib/api";
+
+/** Libellé court d'un programme pour le menu « ajouter à un programme ». */
+function programLabel(p: ProgramSummary): string {
+  return p.setCount > 0 ? `${p.name} · ${p.setCount} exos` : p.name;
+}
 
 const title = "Modèle 3D des muscles — trouver les exercices par groupe";
 const description =
@@ -20,6 +27,10 @@ export const metadata: Metadata = {
 
 export default async function MusclesPage() {
   const user = await getSessionUser();
+  const programs = user ? await listPrograms().catch(() => []) : [];
+  const recentPrograms = programs
+    .slice(0, 8)
+    .map((p) => ({ id: p.id, label: programLabel(p) }));
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-12">
@@ -31,7 +42,10 @@ export default async function MusclesPage() {
       </p>
 
       <div className="mt-10">
-        <MuscleExplorer isLoggedIn={user != null} />
+        <MuscleExplorer
+          isLoggedIn={user != null}
+          programs={recentPrograms}
+        />
       </div>
 
       <p className="mt-10 border-t border-zinc-200 pt-6 text-xs text-zinc-400 dark:border-zinc-800">

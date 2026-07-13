@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { useFormStatus } from "react-dom";
 import {
   BACKEND_GROUP,
@@ -10,8 +10,13 @@ import {
   groupsByRegion,
   REGIONS,
 } from "@/lib/muscles/groups";
-import { addExerciseToNewWorkoutAction } from "@/app/actions/muscles";
+import { addExerciseToProgramAction } from "@/app/actions/muscles";
 import type { Look } from "./body-scene";
+
+export interface ProgramOption {
+  id: string;
+  label: string;
+}
 
 const LOOKS: { id: Look; label: string }[] = [
   { id: "realistic", label: "Réaliste" },
@@ -32,7 +37,13 @@ const BodyScene = dynamic(
   },
 );
 
-export function MuscleExplorer({ isLoggedIn }: { isLoggedIn: boolean }) {
+export function MuscleExplorer({
+  isLoggedIn,
+  programs,
+}: {
+  isLoggedIn: boolean;
+  programs: ProgramOption[];
+}) {
   const [selected, setSelected] = useState<string | null>(null);
   const [look, setLook] = useState<Look>("realistic");
 
@@ -144,10 +155,12 @@ export function MuscleExplorer({ isLoggedIn }: { isLoggedIn: boolean }) {
                     style={{ backgroundColor: active.color }}
                   />
                   <span className="flex-1">{name}</span>
-                  <AddToWorkoutButton
+                  <AddToProgramMenu
                     name={name}
                     backendGroup={BACKEND_GROUP[active.id]}
                     isLoggedIn={isLoggedIn}
+                    programs={programs}
+                    newProgramName={active.label}
                   />
                 </li>
               ))}
@@ -170,41 +183,81 @@ export function MuscleExplorer({ isLoggedIn }: { isLoggedIn: boolean }) {
 }
 
 const BTN =
-  "shrink-0 rounded-md border border-zinc-300 px-2 py-1 text-xs font-medium text-zinc-700 transition-colors hover:bg-zinc-100 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800";
+  "shrink-0 rounded-md border border-zinc-300 px-2 py-1 text-xs font-medium text-zinc-700 transition-colors hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800";
 
-/** Bouton « + Séance » : crée une nouvelle séance avec cet exercice et l'ouvre. */
-function AddToWorkoutButton({
+/**
+ * Menu « + Programme » : choisir le programme cible avant d'ajouter l'exercice —
+ * un nouveau programme (nommé d'après le muscle), ou un programme existant.
+ * Menu natif <details>.
+ */
+function AddToProgramMenu({
   name,
   backendGroup,
   isLoggedIn,
+  programs,
+  newProgramName,
 }: {
   name: string;
   backendGroup: string;
   isLoggedIn: boolean;
+  programs: ProgramOption[];
+  newProgramName: string;
 }) {
   if (!isLoggedIn) {
     return (
       <Link
         href="/connexion"
-        title="Connecte-toi pour l'ajouter à une séance"
+        title="Connecte-toi pour l'ajouter à un programme"
         className={BTN}
       >
-        + Séance
+        + Programme
       </Link>
     );
   }
   return (
-    <form action={addExerciseToNewWorkoutAction.bind(null, name, backendGroup)}>
-      <SubmitAdd />
-    </form>
+    <details name="add-program" className="group relative shrink-0">
+      <summary className={`${BTN} flex cursor-pointer list-none items-center gap-1 [&::-webkit-details-marker]:hidden`}>
+        + Programme
+        <span aria-hidden className="text-[0.6rem] transition-transform group-open:rotate-180">
+          ▾
+        </span>
+      </summary>
+      <div className="absolute right-0 z-20 mt-1 w-60 overflow-hidden rounded-lg border border-zinc-200 bg-white p-1 shadow-lg dark:border-zinc-700 dark:bg-zinc-900">
+        <form
+          action={addExerciseToProgramAction.bind(null, name, backendGroup, "", newProgramName)}
+        >
+          <MenuItem>➕ Nouveau programme « {newProgramName} »</MenuItem>
+        </form>
+
+        {programs.length > 0 && (
+          <>
+            <p className="px-3 pt-2 pb-1 text-[0.7rem] font-medium tracking-wide text-zinc-400 uppercase">
+              Mes programmes
+            </p>
+            {programs.map((p) => (
+              <form
+                key={p.id}
+                action={addExerciseToProgramAction.bind(null, name, backendGroup, p.id, "")}
+              >
+                <MenuItem>{p.label}</MenuItem>
+              </form>
+            ))}
+          </>
+        )}
+      </div>
+    </details>
   );
 }
 
-function SubmitAdd() {
+function MenuItem({ children }: { children: ReactNode }) {
   const { pending } = useFormStatus();
   return (
-    <button type="submit" disabled={pending} className={BTN}>
-      {pending ? "Ajout…" : "+ Séance"}
+    <button
+      type="submit"
+      disabled={pending}
+      className="block w-full rounded-md px-3 py-2 text-left text-sm text-zinc-700 transition-colors hover:bg-zinc-100 disabled:opacity-50 dark:text-zinc-200 dark:hover:bg-zinc-800"
+    >
+      {pending ? "Ajout…" : children}
     </button>
   );
 }

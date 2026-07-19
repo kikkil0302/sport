@@ -15,6 +15,8 @@ import {
   getStoredProfile,
   GOAL_LABELS,
   GOALS,
+  MEAL_IDS,
+  MEAL_OPTIONS,
   planRequestSchema,
   RESTRICTION_LABELS,
   saveStoredProfile,
@@ -22,6 +24,7 @@ import {
   type DayPlan,
   type DietRestriction,
   type FoodCategory,
+  type MealId,
   type NutritionPlan,
   type ShoppingItem,
   type WeeklyPlan,
@@ -29,7 +32,7 @@ import {
 import { formValue } from "@/lib/forms";
 
 type Field = "sex" | "age" | "heightCm" | "weightKg" | "activityLevel" | "goal";
-type FieldErrors = Partial<Record<Field, string>>;
+type FieldErrors = Partial<Record<Field | "meals", string>>;
 
 const NUMBER_REQUIRED = "Veuillez saisir un nombre valide";
 
@@ -54,6 +57,7 @@ export function DietPlanner() {
   const [result, setResult] = useState<{
     plan: NutritionPlan;
     restrictions: DietRestriction[];
+    meals: MealId[];
   } | null>(null);
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -66,11 +70,17 @@ export function DietPlanner() {
     const restrictions = DIET_RESTRICTIONS.filter(
       (restriction) => formData.get(`restriction-${restriction}`) === "on",
     );
+    const meals = MEAL_IDS.filter(
+      (meal) => formData.get(`meal-${meal}`) === "on",
+    );
 
     const missing: FieldErrors = {};
     if (age === undefined) missing.age = NUMBER_REQUIRED;
     if (heightCm === undefined) missing.heightCm = NUMBER_REQUIRED;
     if (weightKg === undefined) missing.weightKg = NUMBER_REQUIRED;
+    if (meals.length < 2)
+      missing.meals =
+        "Gardez au moins deux repas pour répartir les apports de la journée";
     if (Object.keys(missing).length > 0) {
       setErrors(missing);
       setResult(null);
@@ -101,7 +111,7 @@ export function DietPlanner() {
     setErrors({});
     setVariant(0);
     setDay(0);
-    setResult({ plan, restrictions });
+    setResult({ plan, restrictions, meals });
 
     saveStoredProfile({
       sex: formValue(formData, "sex"),
@@ -112,6 +122,7 @@ export function DietPlanner() {
       activityLevel: formValue(formData, "activityLevel"),
       goal: formValue(formData, "goal"),
       restrictions,
+      meals,
     });
   }
 
@@ -121,6 +132,7 @@ export function DietPlanner() {
         result.plan.macros,
         result.restrictions,
         variant,
+        result.meals,
       )
     : null;
   const shopping = week ? buildShoppingList(week) : null;
@@ -179,6 +191,32 @@ export function DietPlanner() {
             options={GOALS.map((goal) => [goal, GOAL_LABELS[goal]])}
           />
         </div>
+
+        <fieldset className="mt-4">
+          <legend className="mb-2 text-sm font-medium">
+            Repas de la journée
+          </legend>
+          <div className="flex flex-wrap gap-x-6 gap-y-2">
+            {MEAL_OPTIONS.map((meal) => (
+              <label key={meal.id} className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  name={`meal-${meal.id}`}
+                  defaultChecked={stored?.meals?.includes(meal.id) ?? true}
+                  className="h-4 w-4 accent-emerald-600"
+                />
+                <span aria-hidden>{meal.emoji}</span> {meal.name}
+              </label>
+            ))}
+          </div>
+          <p className="mt-1.5 text-xs text-zinc-500 dark:text-zinc-400">
+            Décochez un repas pour le retirer : ses calories et macros se
+            répartissent sur les repas restants.
+          </p>
+          {errors.meals && (
+            <p className="mt-1 text-xs text-red-500">{errors.meals}</p>
+          )}
+        </fieldset>
 
         <fieldset className="mt-4">
           <legend className="mb-2 text-sm font-medium">

@@ -19,7 +19,7 @@ export function computeNutritionPlan(
     bmr,
     tdee,
     targetCalories: calories,
-    macros: macroTargets(calories, profile.weightKg, goal),
+    macros: macroTargets(calories, profile.weightKg, profile.heightCm, goal),
     goal,
     activityLevel,
   };

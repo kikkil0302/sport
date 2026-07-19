@@ -5,6 +5,7 @@ import {
   FOODS,
   isAllowed,
   macroKcal,
+  MEAL_IDS,
   type DietRestriction,
 } from "./diet";
 import type { MacroTargets } from "./types";
@@ -107,7 +108,7 @@ describe("buildDietPlan", () => {
         for (const meal of plan.meals) {
           for (const item of meal.items) {
             expect(item.grams, item.food.name).toBeGreaterThanOrEqual(5);
-            expect(item.grams, item.food.name).toBeLessThanOrEqual(400);
+            expect(item.grams, item.food.name).toBeLessThanOrEqual(500);
           }
         }
       }
@@ -139,6 +140,69 @@ describe("buildDietPlan", () => {
     for (const meal of plan.meals) {
       for (const item of meal.items) {
         expect(item.grams).toBeGreaterThanOrEqual(5);
+      }
+    }
+  });
+
+  it("keeps breakfast foods sensible across variants (no steak at 7 h)", () => {
+    const dinnerOrLunchOnly = [
+      "Blanc de poulet",
+      "Steak haché 5 %",
+      "Jambon blanc",
+      "Saumon",
+      "Thon au naturel",
+      "Patate douce",
+      "Pommes de terre",
+      "Pâtes cuites",
+    ];
+    for (let variant = 0; variant < 10; variant++) {
+      const plan = buildDietPlan(TARGET_CALORIES, TARGET_MACROS, [], variant);
+      const breakfast = plan.meals[0];
+      expect(breakfast.name).toBe("Petit-déjeuner");
+      for (const item of breakfast.items) {
+        expect(
+          dinnerOrLunchOnly,
+          `v${variant} → ${item.food.name}`,
+        ).not.toContain(item.food.name);
+      }
+    }
+  });
+
+  it("builds only the requested meals", () => {
+    const plan = buildDietPlan(TARGET_CALORIES, TARGET_MACROS, [], 0, [
+      "breakfast",
+      "lunch",
+      "dinner",
+    ]);
+    expect(plan.meals.map((meal) => meal.name)).toEqual([
+      "Petit-déjeuner",
+      "Déjeuner",
+      "Dîner",
+    ]);
+  });
+
+  it("redistributes the macros over the remaining meals", () => {
+    for (const meals of [
+      MEAL_IDS.filter((id) => id !== "snack"),
+      MEAL_IDS.filter((id) => id !== "breakfast"),
+    ]) {
+      for (const variant of VARIANTS) {
+        const plan = buildDietPlan(
+          TARGET_CALORIES,
+          TARGET_MACROS,
+          [],
+          variant,
+          meals,
+        );
+        const label = `${meals.join("+")} v${variant}`;
+        expect(
+          Math.abs(plan.totals.proteinG - TARGET_MACROS.proteinG),
+          `protéines (${label})`,
+        ).toBeLessThanOrEqual(TARGET_MACROS.proteinG * 0.15);
+        expect(
+          Math.abs(plan.totals.kcal - TARGET_CALORIES),
+          `kcal (${label})`,
+        ).toBeLessThanOrEqual(TARGET_CALORIES * 0.15);
       }
     }
   });

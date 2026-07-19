@@ -135,48 +135,56 @@ interface Slot {
   fixedGrams?: number;
 }
 
+export const MEAL_IDS = ["breakfast", "lunch", "snack", "dinner"] as const;
+export type MealId = (typeof MEAL_IDS)[number];
+
 interface MealSpec {
+  id: MealId;
   name: string;
   emoji: string;
-  /** Part des macros journalières visée par ce repas. */
+  /** Part des macros journalières visée par ce repas (renormalisée si un repas est retiré). */
   share: number;
   slots: Slot[];
 }
 
 const MEAL_SPECS: MealSpec[] = [
   {
+    id: "breakfast",
     name: "Petit-déjeuner",
     emoji: "☕",
     share: 0.25,
     slots: [
       { category: "protein", preferred: ["Skyr nature", "Œufs", "Yaourt de soja nature", "Tofu ferme"] },
-      { category: "fruit", preferred: ["Banane"], fixedGrams: 120 },
+      { category: "fruit", preferred: ["Banane", "Fruits rouges", "Pomme"], fixedGrams: 120 },
       { category: "carb", preferred: ["Flocons d'avoine", "Pain complet", "Riz blanc cuit", "Quinoa cuit"] },
       { category: "fat", preferred: ["Amandes", "Beurre de cacahuète"] },
     ],
   },
   {
+    id: "lunch",
     name: "Déjeuner",
     emoji: "🍽️",
     share: 0.35,
     slots: [
       { category: "protein", preferred: ["Blanc de poulet", "Steak haché 5 %", "Seitan", "Tofu ferme", "Lentilles cuites"] },
-      { category: "vegetable", preferred: ["Brocoli", "Haricots verts"], fixedGrams: 200 },
+      { category: "vegetable", preferred: ["Brocoli", "Haricots verts", "Épinards"], fixedGrams: 200 },
       { category: "carb", preferred: ["Riz blanc cuit", "Pâtes cuites", "Quinoa cuit"] },
       { category: "fat", preferred: ["Huile d'olive"] },
     ],
   },
   {
+    id: "snack",
     name: "Collation",
     emoji: "🍎",
     share: 0.1,
     slots: [
-      { category: "protein", preferred: ["Skyr nature", "Yaourt de soja nature"] },
-      { category: "fruit", preferred: ["Pomme", "Fruits rouges"], fixedGrams: 120 },
-      { category: "fat", preferred: ["Amandes"] },
+      { category: "protein", preferred: ["Skyr nature", "Yaourt de soja nature", "Tofu ferme"] },
+      { category: "fruit", preferred: ["Pomme", "Fruits rouges", "Banane"], fixedGrams: 120 },
+      { category: "fat", preferred: ["Amandes", "Beurre de cacahuète"] },
     ],
   },
   {
+    id: "dinner",
     name: "Dîner",
     emoji: "🌙",
     share: 0.3,
@@ -189,12 +197,19 @@ const MEAL_SPECS: MealSpec[] = [
   },
 ];
 
+/** Repas proposables à l'utilisateur, dans l'ordre de la journée. */
+export const MEAL_OPTIONS: { id: MealId; name: string; emoji: string }[] =
+  MEAL_SPECS.map(({ id, name, emoji }) => ({ id, name, emoji }));
+
 /** Densité protéique minimale d'une source de protéines calculée (g/100 g). */
 const MIN_PROTEIN_DENSITY = 8;
 
 /**
- * Choisit l'aliment d'un slot : les préférés d'abord, puis le reste de la
- * catégorie ; `variant` fait tourner la liste (« autre proposition »).
+ * Choisit l'aliment d'un slot ; `variant` fait tourner la liste
+ * (« autre proposition »). La rotation reste dans la liste des aliments
+ * adaptés au repas (pas de steak au petit-déjeuner) ; le reste de la
+ * catégorie ne sert que de secours quand les restrictions éliminent
+ * tous les aliments prévus.
  */
 function pickFood(
   slot: Slot,
@@ -216,9 +231,8 @@ function pickFood(
   const preferred = slot.preferred
     .map((name) => allowed.find((candidate) => candidate.name === name))
     .filter((candidate): candidate is Food => candidate !== undefined);
-  const rest = allowed.filter((candidate) => !preferred.includes(candidate));
-  const ordered = [...preferred, ...rest];
-  return ordered[variant % ordered.length];
+  if (preferred.length > 0) return preferred[variant % preferred.length];
+  return allowed[variant % allowed.length];
 }
 
 function roundGrams(grams: number): number {
@@ -252,7 +266,7 @@ function sumTotals(items: MealItem[]): MacroTotals {
 /** Portion maximale par aliment calculé (garde des quantités réalistes). */
 const MAX_GRAMS: Partial<Record<FoodCategory, number>> = {
   protein: 350,
-  carb: 400,
+  carb: 500,
   fat: 80,
 };
 
@@ -260,12 +274,15 @@ const MAX_GRAMS: Partial<Record<FoodCategory, number>> = {
  * Construit une journée type approchant les cibles macros, dans l'ordre :
  * protéines d'abord, puis les glucides et lipides complètent ce qui manque.
  * `variant` fait tourner les aliments (0 = proposition par défaut).
+ * `mealIds` restreint la journée aux repas choisis : leurs parts sont
+ * renormalisées pour que les repas restants couvrent 100 % des macros.
  */
 export function buildDietPlan(
   calories: number,
   macros: MacroTargets,
   restrictions: DietRestriction[],
   variant = 0,
+  mealIds: readonly MealId[] = MEAL_IDS,
 ): DietPlan {
   const macroKey = {
     protein: "proteinG",
@@ -273,11 +290,16 @@ export function buildDietPlan(
     fat: "fatG",
   } as const;
 
-  const meals: Meal[] = MEAL_SPECS.map((spec) => {
+  const specs = MEAL_SPECS.filter((spec) => mealIds.includes(spec.id));
+  const totalShare =
+    specs.reduce((sum, spec) => sum + spec.share, 0) || 1;
+
+  const meals: Meal[] = specs.map((spec) => {
+    const share = spec.share / totalShare;
     const target = {
-      proteinG: macros.proteinG * spec.share,
-      carbsG: macros.carbsG * spec.share,
-      fatG: macros.fatG * spec.share,
+      proteinG: macros.proteinG * share,
+      carbsG: macros.carbsG * share,
+      fatG: macros.fatG * share,
     };
 
     // Chaque slot présent, avec ses grammes (fixes ou à résoudre).
@@ -365,11 +387,12 @@ export function buildWeeklyPlan(
   macros: MacroTargets,
   restrictions: DietRestriction[],
   offset = 0,
+  mealIds: readonly MealId[] = MEAL_IDS,
 ): WeeklyPlan {
   return WEEKDAY_LABELS.map((label, weekday) => ({
     weekday,
     label,
-    plan: buildDietPlan(calories, macros, restrictions, offset + weekday),
+    plan: buildDietPlan(calories, macros, restrictions, offset + weekday, mealIds),
   }));
 }
 

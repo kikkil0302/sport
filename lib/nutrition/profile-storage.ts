@@ -1,4 +1,4 @@
-import type { DietRestriction } from "./diet";
+import type { DietRestriction, MealId } from "./diet";
 
 // Mémorisation du profil des calculateurs en localStorage UNIQUEMENT :
 // conforme à la règle RGPD du site (rien n'est envoyé ni stocké côté serveur).
@@ -13,6 +13,8 @@ export interface StoredProfile {
   activityLevel: string;
   goal: string;
   restrictions: DietRestriction[];
+  /** Repas cochés pour le menu de la semaine (absent = tous). */
+  meals?: MealId[];
 }
 
 const KEY = "trakmetrik.profile.v1";

@@ -74,15 +74,26 @@ describe("targetCalories", () => {
 
 describe("macroTargets", () => {
   it("allocates protein by body weight, fat by calorie share, carbs as remainder", () => {
-    expect(macroTargets(2207, 80, "lose")).toEqual({
+    expect(macroTargets(2207, 80, 180, "lose")).toEqual({
       proteinG: 160,
       fatG: 61,
       carbsG: 255,
     });
   });
 
+  it("caps protein for heavy people via the adjusted reference weight", () => {
+    // 120 kg / 175 cm en sèche : 2 g/kg sur le poids total donnerait 240 g ;
+    // le poids ajusté (IMC 25 + 25 % de l'excédent) ramène à ~175 g.
+    const { proteinG } = macroTargets(2400, 120, 175, "lose");
+    expect(proteinG).toBe(175);
+  });
+
+  it("leaves protein unchanged below the reference BMI", () => {
+    expect(macroTargets(2759, 70, 175, "maintain").proteinG).toBe(112);
+  });
+
   it("never returns negative carbs", () => {
-    const { carbsG } = macroTargets(800, 100, "lose");
+    const { carbsG } = macroTargets(800, 100, 180, "lose");
     expect(carbsG).toBe(0);
   });
 });
